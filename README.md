@@ -1,5 +1,7 @@
 # pylinkam
 
+[![DOI](https://zenodo.org/badge/507708753.svg)](https://zenodo.org/badge/latestdoi/507708753)
+
 ---
 
 This Python module provides Python bindings for the official C/C++ Linkam SDK. It enables monitoring and control of various instruments provided by Linkam. Can optionally be used with the [pint](https://pint.readthedocs.io/en/stable/) package to handle unit conversion.
@@ -25,7 +27,7 @@ Only tested under Windows 10 using LinkamSDK v3.0.15. In theory the SDK binary f
 Developed at [Swinburne University of Technology](https://swin.edu.au). If used in an academic project, please consider citing this work as it helps attract funding and track research outputs:
 
 ```
-Harrison, C. J. (2022) pylinkam source code (Version 1.0.0) [Source code]. https://github.com/swinburne-sensing/pylinkam
+C. J. Harrison and M. Shafiei. pylinkam. (2022). [Online]. doi: https://doi.org/10.5281/zenodo.6758013
 ```
 
 *This activity received funding from [ARENA](https://arena.gov.au) as part of ARENA’s Research and Development Program – Renewable Hydrogen for Export (Contract No. 2018/RND012). The views expressed herein are not necessarily the views of the Australian Government, and the Australian Government does not accept responsibility for any information or advice contained herein.*
