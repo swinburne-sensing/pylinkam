@@ -6,11 +6,8 @@ import re
 from setuptools import setup, find_packages
 
 
-_RE_URL_DEPENDENCY = re.compile(r'^[^:\s]+://[^#]+#egg=(.+)$')
-
-
 # Read properties from __init__.py
-with open(os.path.join(os.path.dirname(__file__), 'experimentdata', '__init__.py')) as file_init:
+with open(os.path.join(os.path.dirname(__file__), 'pylinkam', '__init__.py')) as file_init:
     content_init = file_init.read()
 
     version = re.search("__version__ = '([^']+)'", content_init).group(1)

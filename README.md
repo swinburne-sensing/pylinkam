@@ -22,7 +22,7 @@ Only tested under Windows 10 using LinkamSDK v3.0.15. In theory the SDK binary f
 
 ## Acknowledgments
 
-Developed at [Swinburne University of Technology](https://swin.edu.au). If used in an academic project, please consider citing this work as it helps us attract funding and track research outputs:
+Developed at [Swinburne University of Technology](https://swin.edu.au). If used in an academic project, please consider citing this work as it helps attract funding and track research outputs:
 
 ```
 Harrison, C. J. (2022) pylinkam source code (Version 1.0.0) [Source code]. https://github.com/swinburne-sensing/pylinkam
