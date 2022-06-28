@@ -1,0 +1,13 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+  - family-names: Harrison
+    given-names: Christopher James
+    orcid: https://orcid.org/0000-0002-6270-0630
+  - family-names: Shafiei
+    given-names: Mahnaz
+    orcid: https://orcid.org/0000-0002-3520-1553
+title: "pylinkam"
+version: 1.0.0
+doi: 10.5281/zenodo.6758012
+date-released: 2022-06-27
