@@ -6,10 +6,10 @@
 
 This Python module provides Python bindings for the official C/C++ Linkam SDK. It enables monitoring and control of various instruments provided by Linkam. Can optionally be used with the [pint](https://pint.readthedocs.io/en/stable/) package to handle unit conversion.
 
-Note that the Linkam SDK binary files (```LinkamSDK_release.dll``` or ```LinkamSDK_debug.dll```) and the required license file (typically ```Linkam.lsk```) are **not** distributed as part of this module.
+Note that the Linkam SDK binary files (`LinkamSDK_release.dll` or `LinkamSDK_debug.dll`) and the required license file (typically `Linkam.lsk`) are **not** distributed as part of this module.
 
 ## Usage
-Initialise the SDK by creating an instance of ```pylinkam.sdk.SDKWrapper``` providing optional paths for SDK binary files and the license file. Once initialised calling ```connect_usb()``` on the wrapper  
+Initialise the SDK by creating an instance of `pylinkam.sdk.SDKWrapper` providing optional paths for SDK binary files and the license file. Once initialised calling `connect_usb()` on the wrapper  
 
 ## Tested Devices
 This library has been developed for the following Linkam instruments/addons, a check indicated that functionality has been verified on working hardware:
