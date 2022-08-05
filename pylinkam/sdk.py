@@ -7,8 +7,8 @@ import time
 import threading
 import typing
 
+# Try and use pint for units if available
 try:
-    # Try and use pint for units if available
     # noinspection PyPackageRequirements
     import pint
 except ImportError:
@@ -36,7 +36,7 @@ class SDKConnectionError(SDKError):
 class SDKWrapper:
     """ Wrapper for Linkam SDK. """
 
-    _DEFAULT_SDK_PATH = os.path.dirname(os.path.abspath(__file__))
+    _DEFAULT_SDK_ROOT_PATH = os.path.dirname(os.path.abspath(__file__))
 
     class Connection:
         """ Wrapper for connection to Linkam controller. """
@@ -53,14 +53,13 @@ class SDKWrapper:
             self._handle: typing.Optional[interface.CommsHandle] = handle
 
         def __del__(self):
-            if hasattr(self, '_handle'):
-                self.close()
+            self.close()
 
         def close(self) -> None:
             """ Close communication channel.
 
             """
-            if self._handle is not None:
+            if hasattr(self, '_handle') and self._handle is not None:
                 self._parent.process_message(interface.Message.CLOSE_COMMS, comm_handle=self._handle)
                 self._handle = None
 
@@ -329,90 +328,32 @@ class SDKWrapper:
                 comm_handle=self._handle
             )
 
-    def __init__(self, sdk_path: typing.Optional[str] = None, log_path: typing.Optional[str] = None,
-                 license_path: typing.Optional[str] = None, debug: bool = False):
+    def __init__(self, sdk_root_path: typing.Optional[str] = None, sdk_log_path: typing.Optional[str] = None,
+                 sdk_license_path: typing.Optional[str] = None, debug: bool = False):
         """ Initialise the SDK, loading the required binary files.
 
-        :param sdk_path: search path for SDK binary files, defaults to module directory
-        :param log_path: path for SDK logging, defaults to SDK directory
-        :param license_path: path for SDL license file, defaults to SDK directory
+        :param sdk_root_path: search path for SDK binary files, defaults to module directory
+        :param sdk_log_path: path for SDK logging, defaults to SDK directory
+        :param sdk_license_path: path for SDL license file, defaults to SDK directory
         :param debug: if True use debug DLL, else use release version
         """
-        self._sdk_path = sdk_path or self._DEFAULT_SDK_PATH
+        self._sdk_root_path = sdk_root_path or self._DEFAULT_SDK_ROOT_PATH
 
-        self._sdk = None
+        self._sdk: typing.Optional[ctypes.WinDLL] = None
         self._sdk_lock = threading.RLock()
 
         object.__init__(self)
 
-        # Locate DLL
-        dll_name = f"LinkamSDK_{'debug' if debug else 'release'}.dll"
-
-        if log_path is None:
-            log_path = os.path.join(self._sdk_path, 'Linkam.log')
-
-        self._log_path = log_path
-
-        # Generate temporary license file if none is provided
-        if license_path is None:
-            license_path = os.path.join(self._sdk_path, 'Linkam.lsk')
-
-        # This might be a little crazy, but the Linkam SDK crashes occasionally (maybe 1 out of every 100 loads) and
-        # it looks like it's because the library attempts to open the license file before it's available. This delay
-        # makes that less likely 🤷
-        time.sleep(0.2)
-
-        self._license_path = license_path
-
-        # Load SDK DLL
-        try:
-            self._sdk = ctypes.WinDLL(dll_name)
-        except FileNotFoundError:
-            # Try absolute path
-            self._sdk = ctypes.WinDLL(os.path.join(self._sdk_path, dll_name))
-
-        if self._sdk is None:
-            raise SDKError('Linkam SDK was not loaded')
-
-        # Provide type hints/restrictions
-        self._sdk.linkamInitialiseSDK.argtypes = (ctypes.c_char_p, ctypes.c_char_p, ctypes.c_bool)
-        self._sdk.linkamInitialiseSDK.restype = ctypes.c_bool
-
-        self._sdk.linkamExitSDK.argtypes = ()
-        self._sdk.linkamExitSDK.restype = None
-
-        self._sdk.linkamInitialiseSerialinterface.CommsInfo.argtypes = (
-            ctypes.POINTER(interface.CommsInfo), ctypes.c_char_p
-        )
-        self._sdk.linkamInitialiseSerialinterface.CommsInfo.restype = None
-
-        self._sdk.linkamInitialiseUSBinterface.CommsInfo.argtypes = (
-            ctypes.POINTER(interface.CommsInfo), ctypes.c_char_p
-        )
-        self._sdk.linkamInitialiseUSBinterface.CommsInfo.restype = None
-
-        self._sdk.linkamGetVersion.argtypes = (
-            ctypes.c_char_p, ctypes.c_uint64
-        )
-        self._sdk.linkamGetVersion.restype = ctypes.c_bool
-
-        self._sdk.linkamProcessinterface.Message.argtypes = (
-            ctypes.c_int32, interface.CommsHandle, ctypes.POINTER(interface.Variant), interface.Variant,
-            interface.Variant, interface.Variant
-        )
-        self._sdk.linkamProcessinterface.Message.restype = ctypes.c_bool
-
-        # Initialise SDK
-        if not self._sdk.linkamInitialiseSDK(self._log_path.encode(), self._license_path.encode(), False):
-            raise SDKError('Failed to initialize Linkam SDK')
-
-        _LOGGER.info(f"Initialized Linkam SDK {self.get_version()}")
-
-        # Configure default logging
-        self.set_logging_level(interface.LoggingLevel.MINIMAL)
+        # Setup DLL name and paths
+        self._sdk_dll_name = f"LinkamSDK_{'debug' if debug else 'release'}.dll"
+        self._sdk_log_path = sdk_log_path or os.path.join(self.sdk_root_path, 'Linkam.log')
+        self._sdk_license_path = sdk_license_path or os.path.join(self.sdk_root_path, 'Linkam.lsk')
 
     def __del__(self):
-        # Release SDK
+        # Release SDK if connected
+        self.close()
+
+    def close(self) -> None:
         if hasattr(self, '_sdk') and self._sdk is not None:
             self._sdk.linkamExitSDK()
 
@@ -421,7 +362,78 @@ class SDKWrapper:
     @property
     def sdk(self) -> ctypes.WinDLL:
         if self._sdk is None:
-            raise SDKError('SDK DLL')
+            # This might be a little crazy, but the Linkam SDK crashes occasionally (maybe 1 out of every 100 loads) and
+            # it looks like it's because the library attempts to open the license file before it's available. This delay
+            # makes that less likely 🤷
+            time.sleep(0.2)
+
+            # Load SDK DLL
+            try:
+                sdk = ctypes.WinDLL(self.sdk_dll_name)
+            except FileNotFoundError:
+                # Try absolute path
+                sdk = ctypes.WinDLL(os.path.join(self.sdk_root_path, self.sdk_dll_name))
+
+            if sdk is None:
+                raise SDKError('Linkam SDK was not loaded')
+
+            # Provide type hints/restrictions
+            sdk.linkamInitialiseSDK.argtypes = (ctypes.c_char_p, ctypes.c_char_p, ctypes.c_bool)
+            sdk.linkamInitialiseSDK.restype = ctypes.c_bool
+
+            sdk.linkamExitSDK.argtypes = ()
+            sdk.linkamExitSDK.restype = None
+
+            sdk.linkamInitialiseSerialinterface.CommsInfo.argtypes = (
+                ctypes.POINTER(interface.CommsInfo), ctypes.c_char_p
+            )
+            sdk.linkamInitialiseSerialinterface.CommsInfo.restype = None
+
+            sdk.linkamInitialiseUSBinterface.CommsInfo.argtypes = (
+                ctypes.POINTER(interface.CommsInfo), ctypes.c_char_p
+            )
+            sdk.linkamInitialiseUSBinterface.CommsInfo.restype = None
+
+            sdk.linkamGetVersion.argtypes = (
+                ctypes.c_char_p, ctypes.c_uint64
+            )
+            sdk.linkamGetVersion.restype = ctypes.c_bool
+
+            sdk.linkamProcessinterface.Message.argtypes = (
+                ctypes.c_int32, interface.CommsHandle, ctypes.POINTER(interface.Variant), interface.Variant,
+                interface.Variant, interface.Variant
+            )
+            sdk.linkamProcessinterface.Message.restype = ctypes.c_bool
+
+            # Initialise SDK
+            if not sdk.linkamInitialiseSDK(self.sdk_log_path.encode(), self.sdk_license_path.encode(), False):
+                raise SDKError('Failed to initialize Linkam SDK')
+
+            _LOGGER.info(f"Initialized Linkam SDK {self.get_version()}")
+
+            # Configure default logging
+            self.set_logging_level(interface.LoggingLevel.MINIMAL)
+
+            # Save handle
+            self._sdk = sdk
+
+        return self._sdk
+
+    @property
+    def sdk_dll_name(self) -> str:
+        return self._sdk_dll_name
+
+    @property
+    def sdk_license_path(self) -> str:
+        return self._sdk_license_path
+
+    @property
+    def sdk_log_path(self) -> str:
+        return self._sdk_log_path
+
+    @property
+    def sdk_root_path(self) -> str:
+        return self._sdk_root_path
 
     def process_message(self, message: interface.Message, *args: typing.Tuple[str, typing.Any],
                         comm_handle: typing.Optional[interface.CommsHandle] = None) -> typing.Any:
