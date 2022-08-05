@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ctypes
 import logging
 import os
 import time
@@ -8,12 +9,12 @@ import typing
 
 try:
     # Try and use pint for units if available
+    # noinspection PyPackageRequirements
     import pint
 except ImportError:
     pint = None
 
-from pylinkam.interface import *
-from pylinkam.util import add_path
+from pylinkam import interface, util
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -21,7 +22,7 @@ _LOGGER = logging.getLogger(__name__)
 
 # Locate SDK files and add to system path
 SDK_PATH = os.path.dirname(os.path.abspath(__file__))
-add_path(SDK_PATH)
+util.add_path(SDK_PATH)
 
 
 class SDKError(Exception):
@@ -32,15 +33,15 @@ class SDKConnectionError(SDKError):
     pass
 
 
-class SDKWrapper(object):
+class SDKWrapper:
     """ Wrapper for Linkam SDK. """
 
     _DEFAULT_SDK_PATH = os.path.dirname(os.path.abspath(__file__))
 
-    class Connection(object):
+    class Connection:
         """ Wrapper for connection to Linkam controller. """
 
-        def __init__(self, parent: SDKWrapper, handle: CommsHandle):
+        def __init__(self, parent: SDKWrapper, handle: interface.CommsHandle):
             """
 
             :param parent:
@@ -49,7 +50,7 @@ class SDKWrapper(object):
             super().__init__()
 
             self._parent = parent
-            self._handle: typing.Optional[CommsHandle] = handle
+            self._handle: typing.Optional[interface.CommsHandle] = handle
 
         def __del__(self):
             if hasattr(self, '_handle'):
@@ -60,7 +61,7 @@ class SDKWrapper(object):
 
             """
             if self._handle is not None:
-                self._parent.process_message(Message.CLOSE_COMMS, comm_handle=self._handle)
+                self._parent.process_message(interface.Message.CLOSE_COMMS, comm_handle=self._handle)
                 self._handle = None
 
         def enable_heater(self, enabled: bool) -> None:
@@ -68,59 +69,86 @@ class SDKWrapper(object):
 
             :param enabled: if True start temperature controller, otherwise stop temperature controller
             """
-            self._parent.process_message(Message.START_HEATING, ('vBoolean', enabled), comm_handle=self._handle)
+            self._parent.process_message(
+                interface.Message.START_HEATING,
+                ('vBoolean', enabled),
+                comm_handle=self._handle
+            )
 
         def enable_humidity(self, enabled: bool) -> None:
             """ Enable/disable the humidity generator.
 
             :param enabled: if True start humidity generator, otherwise stop humidity generator
             """
-            self._parent.process_message(Message.START_HUMIDITY, ('vBoolean', enabled), comm_handle=self._handle)
+            self._parent.process_message(
+                interface.Message.START_HUMIDITY,
+                ('vBoolean', enabled),
+                comm_handle=self._handle
+            )
 
-        def get_controller_config(self) -> ControllerConfig:
+        def get_controller_config(self) -> interface.ControllerConfig:
             """ Fetch controller configuration/metadata.
 
-            :return: ControllerConfig
+            :return: interface.ControllerConfig
             """
-            return self._parent.process_message(Message.GET_CONTROLLER_CONFIG, comm_handle=self._handle)
+            return self._parent.process_message(
+                interface.Message.GET_CONTROLLER_CONFIG,
+                comm_handle=self._handle
+            )
 
         def get_controller_firmware_version(self) -> str:
             """ Get controller firmware version.
 
             :return: str
             """
-            return self._parent.process_message_str(Message.GET_CONTROLLER_FIRMWARE_VERSION, 64, self._handle)
+            return self._parent.process_message_str(
+                interface.Message.GET_CONTROLLER_FIRMWARE_VERSION,
+                64,
+                self._handle
+            )
 
         def get_controller_hardware_version(self) -> str:
             """ Get controller hardware version.
 
             :return: str
             """
-            return self._parent.process_message_str(Message.GET_CONTROLLER_HARDWARE_VERSION, 64, self._handle)
+            return self._parent.process_message_str(
+                interface.Message.GET_CONTROLLER_HARDWARE_VERSION,
+                64,
+                self._handle
+            )
 
         def get_controller_name(self) -> str:
             """ Get controller hardware version.
 
             :return: str
             """
-            return self._parent.process_message_str(Message.GET_CONTROLLER_NAME, 26, self._handle)
+            return self._parent.process_message_str(
+                interface.Message.GET_CONTROLLER_NAME,
+                26,
+                self._handle
+            )
 
         def get_controller_serial(self) -> str:
             """ Get controller serial number.
 
             :return: str
             """
-            return self._parent.process_message_str(Message.GET_CONTROLLER_SERIAL, 18, self._handle)
+            return self._parent.process_message_str(
+                interface.Message.GET_CONTROLLER_SERIAL,
+                18,
+                self._handle
+            )
 
-        def get_heater_details(self, channel: int = 0) -> HeaterDetails:
+        def get_heater_details(self, channel: int = 0) -> interface.HeaterDetails:
             """ Get temperature controller characteristics.
 
             :param channel: channel number for controllers with multiple temperature regulators
-            :return: HeaterDetails
+            :return: interface.HeaterDetails
             """
-            detail = HeaterDetails()
+            detail = interface.HeaterDetails()
 
-            self._parent.process_message(Message.GET_CONTROLLER_HEATER_DETAILS,
+            self._parent.process_message(interface.Message.GET_CONTROLLER_HEATER_DETAILS,
                                          ('vPtr', detail),
                                          ('vUint32', channel + 1),
                                          comm_handle=self._handle)
@@ -132,49 +160,63 @@ class SDKWrapper(object):
 
             :return: str
             """
-            return self._parent.process_message_str(Message.GET_HUMIDITY_CONTROLLER_SENSOR_NAME, 26, self._handle)
+            return self._parent.process_message_str(
+                interface.Message.GET_HUMIDITY_CONTROLLER_SENSOR_NAME,
+                26,
+                self._handle
+            )
 
         def get_humidity_controller_sensor_serial(self) -> str:
             """ Get humidity sensor serial number from humidity generator.
 
             :return: str
             """
-            return self._parent.process_message_str(Message.GET_HUMIDITY_CONTROLLER_SENSOR_SERIAL, 18,
-                                                    self._handle)
+            return self._parent.process_message_str(
+                interface.Message.GET_HUMIDITY_CONTROLLER_SENSOR_SERIAL,
+                18,
+                self._handle
+            )
 
         def get_humidity_controller_sensor_hardware_version(self) -> str:
             """ Get humidity sensor hardware version from humidity generator.
 
             :return: str
             """
-            return self._parent.process_message_str(Message.GET_HUMIDITY_CONTROLLER_SENSOR_HARDWARE_VERSION, 7,
-                                                    self._handle)
+            return self._parent.process_message_str(
+                interface.Message.GET_HUMIDITY_CONTROLLER_SENSOR_HARDWARE_VERSION,
+                7,
+                self._handle
+            )
 
-        def get_humidity_details(self) -> RHUnit:
+        def get_humidity_details(self) -> interface.RHUnit:
             """ Get humidity generator characteristics.
 
-            :return: RHUnit
+            :return: interface.RHUnit
             """
-            detail = RHUnit()
+            detail = interface.RHUnit()
 
-            self._parent.process_message(Message.GET_VALUE,
-                                         ('vStageValueType', StageValueType.STAGE_HUMIDITY_UNIT_DATA),
-                                         ('vPtr', detail),
-                                         comm_handle=self._handle)
+            self._parent.process_message(
+                interface.Message.GET_VALUE,
+                ('vinterface.StageValueType', interface.StageValueType.STAGE_HUMIDITY_UNIT_DATA),
+                ('vPtr', detail),
+                comm_handle=self._handle
+            )
 
             return detail
 
-        def get_program_state(self) -> Running:
+        def get_program_state(self) -> interface.Running:
             """ Get controller state.
 
-            :return: Running
+            :return: interface.Running
             """
-            state = Running()
+            state = interface.Running()
 
-            self._parent.process_message(Message.GET_PROGRAM_STATE,
-                                         ('vUint32', 1),
-                                         ('vPtr', state),
-                                         comm_handle=self._handle)
+            self._parent.process_message(
+                interface.Message.GET_PROGRAM_STATE,
+                ('vUint32', 1),
+                ('vPtr', state),
+                comm_handle=self._handle
+            )
 
             return state
 
@@ -183,38 +225,63 @@ class SDKWrapper(object):
 
             :return: str
             """
-            return self._parent.process_message_str(Message.GET_STAGE_FIRMWARE_VERSION, 64, self._handle)
+            return self._parent.process_message_str(
+                interface.Message.GET_STAGE_FIRMWARE_VERSION,
+                64,
+                self._handle
+            )
 
         def get_stage_hardware_version(self) -> str:
             """ Get stage hardware version.
 
             :return: str
             """
-            return self._parent.process_message_str(Message.GET_STAGE_HARDWARE_VERSION, 64, self._handle)
+            return self._parent.process_message_str(
+                interface.Message.GET_STAGE_HARDWARE_VERSION,
+                64,
+                self._handle
+            )
 
         def get_stage_name(self) -> str:
             """ Get stage name.
 
             :return: str
             """
-            return self._parent.process_message_str(Message.GET_STAGE_NAME, 26, self._handle)
+            return self._parent.process_message_str(
+                interface.Message.GET_STAGE_NAME,
+                26,
+                self._handle
+            )
 
         def get_stage_serial(self) -> str:
             """ Get stage serial number.
 
             :return: str
             """
-            return self._parent.process_message_str(Message.GET_STAGE_SERIAL, 18, self._handle)
+            return self._parent.process_message_str(
+                interface.Message.GET_STAGE_SERIAL,
+                18,
+                self._handle
+            )
             
-        def get_status(self) -> ControllerStatus:
-            return self._parent.process_message(Message.GET_STATUS, comm_handle=self._handle)
+        def get_status(self) -> interface.ControllerStatus:
+            return self._parent.process_message(
+                interface.Message.GET_STATUS,
+                comm_handle=self._handle
+            )
 
-        def get_stage_config(self) -> StageConfig:
-            return self._parent.process_message(Message.GET_STAGE_CONFIG, comm_handle=self._handle)
+        def get_stage_config(self) -> interface.StageConfig:
+            return self._parent.process_message(
+                interface.Message.GET_STAGE_CONFIG,
+                comm_handle=self._handle
+            )
 
-        def _get_value_msg(self, message: Message, value_type: StageValueType) -> typing.Any:
-            value = self._parent.process_message(message, ('vStageValueType', value_type.value),
-                                                 comm_handle=self._handle)
+        def _get_value_msg(self, message: interface.Message, value_type: interface.StageValueType) -> typing.Any:
+            value = self._parent.process_message(
+                message,
+                ('vinterface.StageValueType', value_type.value),
+                comm_handle=self._handle
+            )
 
             # Get variant field
             value = getattr(value, value_type.variant_field)
@@ -225,24 +292,24 @@ class SDKWrapper(object):
 
             return value
 
-        def get_value(self, value_type: StageValueType) -> typing.Any:
+        def get_value(self, value_type: interface.StageValueType) -> typing.Any:
             """ Read parameter from Linkam controller/stage.
 
             :param value_type: parameter to read
             :return: various
             """
-            return self._get_value_msg(Message.GET_VALUE, value_type)
+            return self._get_value_msg(interface.Message.GET_VALUE, value_type)
 
-        def get_value_range(self, value_type: StageValueType) -> typing.Tuple[typing.Any, typing.Any]:
+        def get_value_range(self, value_type: interface.StageValueType) -> typing.Tuple[typing.Any, typing.Any]:
             """ Read allowable range from Linkam controller/stage.
 
             :param value_type: parameter to read
             :return: tuple with 2 elements containing minimum and maximum, type varies
             """
-            return self._get_value_msg(Message.GET_MIN_VALUE, value_type), self._get_value_msg(Message.GET_MAX_VALUE,
-                                                                                               value_type)
+            return self._get_value_msg(interface.Message.GET_MIN_VALUE, value_type),\
+                self._get_value_msg(interface.Message.GET_MAX_VALUE, value_type)
 
-        def set_value(self, value_type: StageValueType, n: typing.Any) -> bool:
+        def set_value(self, value_type: interface.StageValueType, n: typing.Any) -> bool:
             """
 
             :param value_type:
@@ -255,9 +322,12 @@ class SDKWrapper(object):
                 else:
                     n = n.magnitude
 
-            return self._parent.process_message(Message.SET_VALUE, ('vStageValueType', value_type.value),
-                                                (value_type.variant_field, n),
-                                                comm_handle=self._handle)
+            return self._parent.process_message(
+                interface.Message.SET_VALUE,
+                ('vinterface.StageValueType', value_type.value),
+                (value_type.variant_field, n),
+                comm_handle=self._handle
+            )
 
     def __init__(self, sdk_path: typing.Optional[str] = None, log_path: typing.Optional[str] = None,
                  license_path: typing.Optional[str] = None, debug: bool = False):
@@ -266,14 +336,14 @@ class SDKWrapper(object):
         :param sdk_path: search path for SDK binary files, defaults to module directory
         :param log_path: path for SDK logging, defaults to SDK directory
         :param license_path: path for SDL license file, defaults to SDK directory
-        :param debug: if True use DLL for debugging, else use release version
+        :param debug: if True use debug DLL, else use release version
         """
         self._sdk_path = sdk_path or self._DEFAULT_SDK_PATH
 
         self._sdk = None
         self._sdk_lock = threading.RLock()
 
-        super(SDKWrapper, self).__init__()
+        object.__init__(self)
 
         # Locate DLL
         dll_name = f"LinkamSDK_{'debug' if debug else 'release'}.dll"
@@ -301,6 +371,9 @@ class SDKWrapper(object):
             # Try absolute path
             self._sdk = ctypes.WinDLL(os.path.join(self._sdk_path, dll_name))
 
+        if self._sdk is None:
+            raise SDKError('Linkam SDK was not loaded')
+
         # Provide type hints/restrictions
         self._sdk.linkamInitialiseSDK.argtypes = (ctypes.c_char_p, ctypes.c_char_p, ctypes.c_bool)
         self._sdk.linkamInitialiseSDK.restype = ctypes.c_bool
@@ -308,18 +381,26 @@ class SDKWrapper(object):
         self._sdk.linkamExitSDK.argtypes = ()
         self._sdk.linkamExitSDK.restype = None
 
-        self._sdk.linkamInitialiseSerialCommsInfo.argtypes = (ctypes.POINTER(CommsInfo), ctypes.c_char_p)
-        self._sdk.linkamInitialiseSerialCommsInfo.restype = None
+        self._sdk.linkamInitialiseSerialinterface.CommsInfo.argtypes = (
+            ctypes.POINTER(interface.CommsInfo), ctypes.c_char_p
+        )
+        self._sdk.linkamInitialiseSerialinterface.CommsInfo.restype = None
 
-        self._sdk.linkamInitialiseUSBCommsInfo.argtypes = (ctypes.POINTER(CommsInfo), ctypes.c_char_p)
-        self._sdk.linkamInitialiseUSBCommsInfo.restype = None
+        self._sdk.linkamInitialiseUSBinterface.CommsInfo.argtypes = (
+            ctypes.POINTER(interface.CommsInfo), ctypes.c_char_p
+        )
+        self._sdk.linkamInitialiseUSBinterface.CommsInfo.restype = None
 
-        self._sdk.linkamGetVersion.argtypes = (ctypes.c_char_p, ctypes.c_uint64)
+        self._sdk.linkamGetVersion.argtypes = (
+            ctypes.c_char_p, ctypes.c_uint64
+        )
         self._sdk.linkamGetVersion.restype = ctypes.c_bool
 
-        self._sdk.linkamProcessMessage.argtypes = (ctypes.c_int32, CommsHandle, ctypes.POINTER(Variant), Variant,
-                                                   Variant, Variant)
-        self._sdk.linkamProcessMessage.restype = ctypes.c_bool
+        self._sdk.linkamProcessinterface.Message.argtypes = (
+            ctypes.c_int32, interface.CommsHandle, ctypes.POINTER(interface.Variant), interface.Variant,
+            interface.Variant, interface.Variant
+        )
+        self._sdk.linkamProcessinterface.Message.restype = ctypes.c_bool
 
         # Initialise SDK
         if not self._sdk.linkamInitialiseSDK(self._log_path.encode(), self._license_path.encode(), False):
@@ -328,7 +409,7 @@ class SDKWrapper(object):
         _LOGGER.info(f"Initialized Linkam SDK {self.get_version()}")
 
         # Configure default logging
-        self.set_logging_level(LoggingLevel.MINIMAL)
+        self.set_logging_level(interface.LoggingLevel.MINIMAL)
 
     def __del__(self):
         # Release SDK
@@ -337,8 +418,13 @@ class SDKWrapper(object):
 
         self._sdk = None
 
-    def process_message(self, message: Message, *args: typing.Tuple[str, typing.Any],
-                        comm_handle: typing.Optional[CommsHandle] = None) -> typing.Any:
+    @property
+    def sdk(self) -> ctypes.WinDLL:
+        if self._sdk is None:
+            raise SDKError('SDK DLL')
+
+    def process_message(self, message: interface.Message, *args: typing.Tuple[str, typing.Any],
+                        comm_handle: typing.Optional[interface.CommsHandle] = None) -> typing.Any:
         """ Process Linkam SDK message.
 
         :param message: message type to process
@@ -353,7 +439,7 @@ class SDKWrapper(object):
             raise SDKConnectionError('Connection to Linkam instrument closed')
 
         for arg_type, arg_value in args:
-            var_arg = Variant()
+            var_arg = interface.Variant()
 
             # Cast pointers
             if arg_type == 'vPtr':
@@ -365,13 +451,18 @@ class SDKWrapper(object):
 
         # Pad optional arguments
         for _ in range(3 - len(variant_args)):
-            variant_args.append(Variant())
+            variant_args.append(interface.Variant())
 
-        result = Variant()
+        result = interface.Variant()
 
         with self._sdk_lock:
             try:
-                self._sdk.linkamProcessMessage(message.value, comm_handle, ctypes.pointer(result), *variant_args)
+                self._sdk.linkamProcessinterface.Message(
+                    message.value,
+                    comm_handle,
+                    ctypes.pointer(result),
+                    *variant_args
+                )
             except OSError as exc:
                 raise SDKError('Error occurred while accessing Linkam SDK library') from exc
 
@@ -380,8 +471,8 @@ class SDKWrapper(object):
 
         return result
 
-    def process_message_str(self, message: Message, buffer_length: int,
-                            comm_handle: typing.Optional[CommsHandle] = None) -> str:
+    def process_message_str(self, message: interface.Message, buffer_length: int,
+                            comm_handle: typing.Optional[interface.CommsHandle] = None) -> str:
         """ Wrapped version of _sdk_process_message which includes string decoding.
 
         :param message: message type to process
@@ -400,12 +491,12 @@ class SDKWrapper(object):
 
         return buffer.value.decode().strip()
 
-    def set_logging_level(self, level: LoggingLevel) -> None:
+    def set_logging_level(self, level: interface.LoggingLevel) -> None:
         """ Set SDK logging level.
 
         :param level: integer logging level to use
         """
-        if not self.process_message(Message.ENABLE_LOGGING, ('vUint32', level.value)):
+        if not self.process_message(interface.Message.ENABLE_LOGGING, ('vUint32', level.value)):
             raise SDKError('Cannot configure logging')
 
     def get_version(self) -> str:
@@ -421,11 +512,15 @@ class SDKWrapper(object):
 
         return version_buffer.value.decode()
 
-    def _connect_common(self, comm_info: CommsInfo) -> Connection:
+    def _connect_common(self, comm_info: interface.CommsInfo) -> Connection:
         # Apparently this is ignored internally...
-        comm_handle = CommsHandle(0)
+        comm_handle = interface.CommsHandle(0)
 
-        connection_result = self.process_message(Message.OPEN_COMMS, ('vPtr', comm_info), ('vPtr', comm_handle))
+        connection_result = self.process_message(
+            interface.Message.OPEN_COMMS,
+            ('vPtr', comm_info),
+            ('vPtr', comm_handle)
+        )
 
         if not connection_result.flags.connected:
             if connection_result.flags.errorNoDeviceFound:
@@ -460,10 +555,10 @@ class SDKWrapper(object):
         :return: Connection
         """
         # Configure serial connection
-        comm_info = CommsInfo()
+        comm_info = interface.CommsInfo()
 
         port = ctypes.create_string_buffer(port.encode())
-        self._sdk.linkamInitialiseSerialCommsInfo(ctypes.pointer(comm_info), port)
+        self._sdk.linkamInitialiseSerialinterface.CommsInfo(ctypes.pointer(comm_info), port)
 
         return self._connect_common(comm_info)
 
@@ -474,11 +569,11 @@ class SDKWrapper(object):
         :return: Connection
         """
         # Configure USB connection
-        comm_info = CommsInfo()
+        comm_info = interface.CommsInfo()
 
         if serial_number is not None:
             serial_number = ctypes.create_string_buffer(serial_number.encode())
 
-        self._sdk.linkamInitialiseUSBCommsInfo(ctypes.pointer(comm_info), serial_number)
+        self._sdk.linkamInitialiseUSBinterface.CommsInfo(ctypes.pointer(comm_info), serial_number)
 
         return self._connect_common(comm_info)
