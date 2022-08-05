@@ -4,6 +4,7 @@ import logging
 import os
 import time
 import threading
+import typing
 
 try:
     # Try and use pint for units if available

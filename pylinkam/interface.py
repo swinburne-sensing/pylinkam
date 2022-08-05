@@ -13,7 +13,7 @@ class LoggingLevel(enum.IntEnum):
 
 
 class Message(enum.IntEnum):
-    def __new__(cls, value, variant_field: typing.Optional[str] = None):
+    def __new__(cls, value: int, variant_field: typing.Optional[str] = None) -> Message:
         # noinspection PyArgumentList
         obj = int.__new__(cls, value)
         obj._value_ = value
@@ -595,7 +595,7 @@ class StageConfig(ctypes.Union):
 
 
 class StageValueType(enum.IntEnum):
-    def __new__(cls, value, variant_field: str, unit: typing.Optional[str] = None):
+    def __new__(cls, value: int, variant_field: str, unit: typing.Optional[str] = None) -> StageValueType:
         # noinspection PyArgumentList
         obj = int.__new__(cls, value)
         obj._value_ = value
