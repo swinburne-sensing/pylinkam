@@ -3,7 +3,6 @@ from __future__ import annotations
 import ctypes
 import logging
 import os
-import time
 import threading
 import typing
 
@@ -29,7 +28,7 @@ class SDKError(Exception):
     pass
 
 
-class SDKConnectionError(SDKError):
+class ControllerConnectError(Exception):
     pass
 
 
@@ -47,8 +46,6 @@ class SDKWrapper:
             :param parent:
             :param handle:
             """
-            super().__init__()
-
             self._parent = parent
             self._handle: typing.Optional[interface.CommsHandle] = handle
 
@@ -342,8 +339,6 @@ class SDKWrapper:
         self._sdk: typing.Optional[ctypes.WinDLL] = None
         self._sdk_lock = threading.RLock()
 
-        object.__init__(self)
-
         # Setup DLL name and paths
         self._sdk_dll_name = f"LinkamSDK_{'debug' if debug else 'release'}.dll"
         self._sdk_log_path = sdk_log_path or os.path.join(self.sdk_root_path, 'Linkam.log')
@@ -362,11 +357,6 @@ class SDKWrapper:
     @property
     def sdk(self) -> ctypes.WinDLL:
         if self._sdk is None:
-            # This might be a little crazy, but the Linkam SDK crashes occasionally (maybe 1 out of every 100 loads) and
-            # it looks like it's because the library attempts to open the license file before it's available. This delay
-            # makes that less likely 🤷
-            time.sleep(0.2)
-
             # Load SDK DLL
             try:
                 sdk = ctypes.WinDLL(self.sdk_dll_name)
@@ -415,7 +405,8 @@ class SDKWrapper:
             self.set_logging_level(interface.LoggingLevel.MINIMAL)
 
             # Save handle
-            self._sdk = sdk
+            with self._sdk_lock:
+                self._sdk = sdk
 
         return self._sdk
 
@@ -448,7 +439,7 @@ class SDKWrapper:
         variant_args = []
 
         if comm_handle is None:
-            raise SDKConnectionError('Connection to Linkam instrument closed')
+            raise ControllerConnectError('Connection to Linkam instrument closed')
 
         for arg_type, arg_value in args:
             var_arg = interface.Variant()
@@ -469,7 +460,7 @@ class SDKWrapper:
 
         with self._sdk_lock:
             try:
-                self._sdk.linkamProcessinterface.Message(
+                self.sdk.linkamProcessinterface.Message(
                     message.value,
                     comm_handle,
                     ctypes.pointer(result),
@@ -495,8 +486,12 @@ class SDKWrapper:
         # Allocate buffer for return
         buffer = ctypes.create_string_buffer(buffer_length + 1)
 
-        result = self.process_message(message, ('vPtr', buffer), ('vUint32', buffer_length),
-                                      comm_handle=comm_handle)
+        result = self.process_message(
+            message,
+            ('vPtr', buffer),
+            ('vUint32', buffer_length),
+            comm_handle=comm_handle
+        )
 
         if type(result) is bool and not result:
             raise SDKError(f"Unable to read response to SDK message {message!s}")
@@ -509,7 +504,7 @@ class SDKWrapper:
         :param level: integer logging level to use
         """
         if not self.process_message(interface.Message.ENABLE_LOGGING, ('vUint32', level.value)):
-            raise SDKError('Cannot configure logging')
+            raise SDKError('Unspecified error while configuring logging')
 
     def get_version(self) -> str:
         """ Get SDK version.
@@ -519,8 +514,8 @@ class SDKWrapper:
         version_buffer = ctypes.create_string_buffer(256)
 
         with self._sdk_lock:
-            if not self._sdk.linkamGetVersion(version_buffer, len(version_buffer)):
-                raise SDKError('Failed to retrieve Linkam SDK version')
+            if not self.sdk.linkamGetVersion(version_buffer, len(version_buffer)):
+                raise SDKError('Unspecified error while getting Linkam SDK version')
 
         return version_buffer.value.decode()
 
@@ -536,27 +531,27 @@ class SDKWrapper:
 
         if not connection_result.flags.connected:
             if connection_result.flags.errorNoDeviceFound:
-                raise SDKConnectionError('Device not found')
+                raise ControllerConnectError('Device not found')
             elif connection_result.flags.errorMultipleDevicesFound:
-                raise SDKConnectionError('Multiple devices found')
+                raise ControllerConnectError('Multiple devices found')
             elif connection_result.flags.errorTimeout:
-                raise SDKConnectionError('Timeout')
+                raise ControllerConnectError('Timeout')
             elif connection_result.flags.errorHandleRegistrationFailed:
-                raise SDKConnectionError('Handle registration failed')
+                raise ControllerConnectError('Handle registration failed')
             elif connection_result.flags.errorAllocationFailed:
-                raise SDKConnectionError('Allocation failed')
+                raise ControllerConnectError('Allocation failed')
             elif connection_result.flags.errorSerialNumberRequired:
-                raise SDKConnectionError('Serial number required')
+                raise ControllerConnectError('Serial number required')
             elif connection_result.flags.errorAlreadyOpen:
-                raise SDKConnectionError('Already open')
+                raise ControllerConnectError('Already open')
             elif connection_result.flags.errorPropertiesIncorrect:
-                raise SDKConnectionError('Properties incorrect')
+                raise ControllerConnectError('Properties incorrect')
             elif connection_result.flags.errorPortConfig:
-                raise SDKConnectionError('Invalid port configuration')
+                raise ControllerConnectError('Invalid port configuration')
             elif connection_result.flags.errorCommsStreams:
-                raise SDKConnectionError('Communication error')
+                raise ControllerConnectError('Communication error')
             elif connection_result.flags.errorUnhandled:
-                raise SDKConnectionError('Unhandled error')
+                raise ControllerConnectError('Unhandled error')
 
         return self.Connection(self, comm_handle)
 
@@ -570,7 +565,7 @@ class SDKWrapper:
         comm_info = interface.CommsInfo()
 
         port = ctypes.create_string_buffer(port.encode())
-        self._sdk.linkamInitialiseSerialinterface.CommsInfo(ctypes.pointer(comm_info), port)
+        self.sdk.linkamInitialiseSerialinterface.CommsInfo(ctypes.pointer(comm_info), port)
 
         return self._connect_common(comm_info)
 
@@ -586,6 +581,6 @@ class SDKWrapper:
         if serial_number is not None:
             serial_number = ctypes.create_string_buffer(serial_number.encode())
 
-        self._sdk.linkamInitialiseUSBinterface.CommsInfo(ctypes.pointer(comm_info), serial_number)
+        self.sdk.linkamInitialiseUSBinterface.CommsInfo(ctypes.pointer(comm_info), serial_number)
 
         return self._connect_common(comm_info)
