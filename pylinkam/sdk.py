@@ -49,7 +49,7 @@ class SDKWrapper:
             self._parent = parent
             self._handle: typing.Optional[interface.CommsHandle] = handle
 
-        def __del__(self):
+        def __del__(self) -> None:
             self.close()
 
         def close(self) -> None:
@@ -87,10 +87,10 @@ class SDKWrapper:
 
             :return: interface.ControllerConfig
             """
-            return self._parent.process_message(
+            return typing.cast(interface.ControllerConfig, self._parent.process_message(
                 interface.Message.GET_CONTROLLER_CONFIG,
                 comm_handle=self._handle
-            )
+            ))
 
         def get_controller_firmware_version(self) -> str:
             """ Get controller firmware version.
@@ -261,16 +261,16 @@ class SDKWrapper:
             )
             
         def get_status(self) -> interface.ControllerStatus:
-            return self._parent.process_message(
+            return typing.cast(interface.ControllerStatus, self._parent.process_message(
                 interface.Message.GET_STATUS,
                 comm_handle=self._handle
-            )
+            ))
 
         def get_stage_config(self) -> interface.StageConfig:
-            return self._parent.process_message(
+            return typing.cast(interface.StageConfig, self._parent.process_message(
                 interface.Message.GET_STAGE_CONFIG,
                 comm_handle=self._handle
-            )
+            ))
 
         def _get_value_msg(self, message: interface.Message, value_type: interface.StageValueType) -> typing.Any:
             value = self._parent.process_message(
@@ -278,6 +278,8 @@ class SDKWrapper:
                 ('vinterface.StageValueType', value_type.value),
                 comm_handle=self._handle
             )
+
+            assert value_type.variant_field is not None
 
             # Get variant field
             value = getattr(value, value_type.variant_field)
@@ -318,12 +320,14 @@ class SDKWrapper:
                 else:
                     n = n.magnitude
 
-            return self._parent.process_message(
+            assert value_type.variant_field is not None
+
+            return bool(self._parent.process_message(
                 interface.Message.SET_VALUE,
                 ('vinterface.StageValueType', value_type.value),
                 (value_type.variant_field, n),
                 comm_handle=self._handle
-            )
+            ))
 
     def __init__(self, sdk_root_path: typing.Optional[str] = None, sdk_log_path: typing.Optional[str] = None,
                  sdk_license_path: typing.Optional[str] = None, debug: bool = False):
@@ -344,7 +348,7 @@ class SDKWrapper:
         self._sdk_log_path = sdk_log_path or os.path.join(self.sdk_root_path, 'Linkam.log')
         self._sdk_license_path = sdk_license_path or os.path.join(self.sdk_root_path, 'Linkam.lsk')
 
-    def __del__(self):
+    def __del__(self) -> None:
         # Release SDK if connected
         self.close()
 
