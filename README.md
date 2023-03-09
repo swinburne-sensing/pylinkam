@@ -1,6 +1,6 @@
 # pylinkam
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.6758012.svg)](https://doi.org/10.5281/zenodo.6758012)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.6758012.svg)](https://doi.org/10.5281/zenodo.6758012) ![license](https://img.shields.io/github/license/swinburne-sensing/pylinkam) ![python version](https://img.shields.io/pypi/pyversions/pylinkam) ![issues](https://img.shields.io/github/issues/swinburne-sensing/pylinkam)
 
 ---
 
