@@ -4,14 +4,14 @@
 
 ---
 
-This Python module provides Python bindings for the official C/C++ Linkam SDK. It enables monitoring and control of various instruments provided by Linkam. Can optionally be used with the [pint](https://pint.readthedocs.io/en/stable/) package to handle unit conversion.
+This Python module provides Python bindings for the official C/C++ Linkam SDK. It enables monitoring and control of various instruments provided by Linkam Scientific. The library can optionally be used with the [pint](https://pint.readthedocs.io/en/stable/) package to handle unit conversion.
 
 ## Installation
 Note that the Linkam SDK binary files (`LinkamSDK_release.dll` or `LinkamSDK_debug.dll`) and the required license file (typically `Linkam.lsk`) are **not** distributed as part of this module.
 
-By default the module will look for the Linkam SDK dll using the `$PATH` environment variable, appending the module directory before searching.
+By default, the module will look for the Linkam SDK dll using the `$PATH` environment variable, appending the module directory before searching.
 
-0. If necessary rename `LinkamSDK.dll` (used in recent versions) to `LinkamSDK_release.dll`
+0. If necessary, rename `LinkamSDK.dll` (recent versions) to `LinkamSDK_release.dll`
 1. Place `LinkamSDK_release.dll` (or `LinkamSDK_debug.dll`) and `Linkam.lsk` files inside the `pylinkam` module folder (the one that contains `__init__.py`)
 2. Run `demo.py` to check for any issues. This will set the stage temperature to 25°C temporarily.
 
@@ -26,14 +26,17 @@ from pylinkam import interface, sdk
 with sdk.SDKWrapper() as wrapper:
     with wrapper.connect() as connection:
         print(f"Name: {connection.get_controller_name()}")
+
+        temperature = connection.get_value(interface.StageValueType.HEATER1_TEMP)
+        connection.set_value(interface.StageValueType.HEATER_SETPOINT, 30)
 ```
 
 ## Tested Devices
 This library has been developed for the following Linkam instruments/addons, a check indicated that functionality has been verified on working hardware:
 
 - [x] T96 System Controller (via USB)
-- [ ] T96 System Controller (via RS-232, this might work :shrug:)
-- [x] HFS600E-PB4 Probe Stage
+- [ ] T96 System Controller (via RS-232, might work :shrug:)
+- [x] HFS600E-PB4 Probe Stage (all stages should be supported)
 - [x] RH95 Humidity Controller
 - [ ] LNP96 Cooling Option (should work)
 
@@ -48,3 +51,6 @@ C. J. Harrison and M. Shafiei. pylinkam. (2022). [Online]. doi: https://doi.org/
 ```
 
 *This activity received funding from [ARENA](https://arena.gov.au) as part of ARENA’s Research and Development Program – Renewable Hydrogen for Export (Contract No. 2018/RND012). The views expressed herein are not necessarily the views of the Australian Government, and the Australian Government does not accept responsibility for any information or advice contained herein.*
+
+## Disclaimer
+This library is not an official product or service of Linkam Scientific Instruments Ltd. This library is not endorsed, sponsored, or supported by Linkam Scientific Instruments Ltd. The name Linkam as well as related names, marks, emblems, and images are registered trademarks of their respective owners.
