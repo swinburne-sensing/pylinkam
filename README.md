@@ -6,10 +6,27 @@
 
 This Python module provides Python bindings for the official C/C++ Linkam SDK. It enables monitoring and control of various instruments provided by Linkam. Can optionally be used with the [pint](https://pint.readthedocs.io/en/stable/) package to handle unit conversion.
 
+## Installation
 Note that the Linkam SDK binary files (`LinkamSDK_release.dll` or `LinkamSDK_debug.dll`) and the required license file (typically `Linkam.lsk`) are **not** distributed as part of this module.
 
+By default the module will look for the Linkam SDK dll using the `$PATH` environment variable, appending the module directory before searching.
+
+0. If necessary rename `LinkamSDK.dll` (used in recent versions) to `LinkamSDK_release.dll`
+1. Place `LinkamSDK_release.dll` (or `LinkamSDK_debug.dll`) and `Linkam.lsk` files inside the `pylinkam` module folder (the one that contains `__init__.py`)
+2. Run `demo.py` to check for any issues. This will set the stage temperature to 25°C temporarily.
+
 ## Usage
-Initialise the SDK by creating an instance of `pylinkam.sdk.SDKWrapper` providing optional paths for SDK binary files and the license file. Once initialised calling `connect_usb()` on the wrapper  
+Initialise the SDK by creating an instance of `pylinkam.sdk.SDKWrapper` providing optional paths for SDK binary files and the license file. Once initialised, use the `connect()` method to create a context manager for the connection to a device.  
+
+### Example
+```python
+from pylinkam import interface, sdk
+
+
+with sdk.SDKWrapper() as wrapper:
+    with wrapper.connect() as connection:
+        print(f"Name: {connection.get_controller_name()}")
+```
 
 ## Tested Devices
 This library has been developed for the following Linkam instruments/addons, a check indicated that functionality has been verified on working hardware:
@@ -20,7 +37,7 @@ This library has been developed for the following Linkam instruments/addons, a c
 - [x] RH95 Humidity Controller
 - [ ] LNP96 Cooling Option (should work)
 
-Only tested under Windows 10 using LinkamSDK v3.0.15. In theory the SDK binary files for Linux should have identical mappings, but this hasn't been tested. 
+Only tested under Windows 10 using LinkamSDK `v3.0.5.5` and `v3.0.15.35`. In theory the SDK binary files for Linux should have identical mappings, but this hasn't been tested. 
 
 ## Acknowledgments
 
@@ -31,5 +48,3 @@ C. J. Harrison and M. Shafiei. pylinkam. (2022). [Online]. doi: https://doi.org/
 ```
 
 *This activity received funding from [ARENA](https://arena.gov.au) as part of ARENA’s Research and Development Program – Renewable Hydrogen for Export (Contract No. 2018/RND012). The views expressed herein are not necessarily the views of the Australian Government, and the Australian Government does not accept responsibility for any information or advice contained herein.*
-
-*The work has been supported by the [Future Energy Exports CRC](https://www.fenex.org.au) whose activities are funded by the Australian Government's Cooperative Research Centre Program.*
