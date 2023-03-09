@@ -5,13 +5,15 @@ import logging
 import os
 import threading
 import typing
+from contextlib import contextmanager
+from types import ModuleType
 
 # Try and use pint for units if available
 try:
     # noinspection PyPackageRequirements
     import pint
 except ImportError:
-    pint = None
+    pint: typing.Optional[ModuleType] = None
 
 from pylinkam import interface, util
 
@@ -41,10 +43,10 @@ class SDKWrapper:
         """ Wrapper for connection to Linkam controller. """
 
         def __init__(self, parent: SDKWrapper, handle: interface.CommsHandle):
-            """
+            """ Create a new connection object used to handle all messages to and from a controller.
 
-            :param parent:
-            :param handle:
+            :param parent: handle to parent SDK wrapper
+            :param handle: communication interface handle
             """
             self._parent = parent
             self._handle: typing.Optional[interface.CommsHandle] = handle
@@ -193,7 +195,7 @@ class SDKWrapper:
 
             self._parent.process_message(
                 interface.Message.GET_VALUE,
-                ('vinterface.StageValueType', interface.StageValueType.STAGE_HUMIDITY_UNIT_DATA),
+                ('vStageValueType', interface.StageValueType.STAGE_HUMIDITY_UNIT_DATA),
                 ('vPtr', detail),
                 comm_handle=self._handle
             )
@@ -275,7 +277,7 @@ class SDKWrapper:
         def _get_value_msg(self, message: interface.Message, value_type: interface.StageValueType) -> typing.Any:
             value = self._parent.process_message(
                 message,
-                ('vinterface.StageValueType', value_type.value),
+                ('vStageValueType', value_type.value),
                 comm_handle=self._handle
             )
 
@@ -324,7 +326,7 @@ class SDKWrapper:
 
             return bool(self._parent.process_message(
                 interface.Message.SET_VALUE,
-                ('vinterface.StageValueType', value_type.value),
+                ('vStageValueType', value_type.value),
                 (value_type.variant_field, n),
                 comm_handle=self._handle
             ))
@@ -355,6 +357,7 @@ class SDKWrapper:
     def close(self) -> None:
         if hasattr(self, '_sdk') and self._sdk is not None:
             self._sdk.linkamExitSDK()
+            _LOGGER.info(f"Cleaned up SDK")
 
         self._sdk = None
 
@@ -378,39 +381,39 @@ class SDKWrapper:
             sdk.linkamExitSDK.argtypes = ()
             sdk.linkamExitSDK.restype = None
 
-            sdk.linkamInitialiseSerialinterface.CommsInfo.argtypes = (
+            sdk.linkamInitialiseSerialCommsInfo.argtypes = (
                 ctypes.POINTER(interface.CommsInfo), ctypes.c_char_p
             )
-            sdk.linkamInitialiseSerialinterface.CommsInfo.restype = None
+            sdk.linkamInitialiseSerialCommsInfo.restype = None
 
-            sdk.linkamInitialiseUSBinterface.CommsInfo.argtypes = (
+            sdk.linkamInitialiseUSBCommsInfo.argtypes = (
                 ctypes.POINTER(interface.CommsInfo), ctypes.c_char_p
             )
-            sdk.linkamInitialiseUSBinterface.CommsInfo.restype = None
+            sdk.linkamInitialiseUSBCommsInfo.restype = None
 
             sdk.linkamGetVersion.argtypes = (
                 ctypes.c_char_p, ctypes.c_uint64
             )
             sdk.linkamGetVersion.restype = ctypes.c_bool
 
-            sdk.linkamProcessinterface.Message.argtypes = (
+            sdk.linkamProcessMessage.argtypes = (
                 ctypes.c_int32, interface.CommsHandle, ctypes.POINTER(interface.Variant), interface.Variant,
                 interface.Variant, interface.Variant
             )
-            sdk.linkamProcessinterface.Message.restype = ctypes.c_bool
+            sdk.linkamProcessMessage.restype = ctypes.c_bool
 
             # Initialise SDK
             if not sdk.linkamInitialiseSDK(self.sdk_log_path.encode(), self.sdk_license_path.encode(), False):
                 raise SDKError('Failed to initialize Linkam SDK')
 
-            _LOGGER.info(f"Initialized Linkam SDK {self.get_version()}")
+            # Save handle
+            with self._sdk_lock:
+                self._sdk = sdk
 
             # Configure default logging
             self.set_logging_level(interface.LoggingLevel.MINIMAL)
 
-            # Save handle
-            with self._sdk_lock:
-                self._sdk = sdk
+            _LOGGER.info(f"Initialized Linkam SDK {self.get_version()}")
 
         return self._sdk
 
@@ -443,7 +446,7 @@ class SDKWrapper:
         variant_args = []
 
         if comm_handle is None:
-            raise ControllerConnectError('Connection to Linkam instrument closed')
+            comm_handle = interface.CommsHandle(0)
 
         for arg_type, arg_value in args:
             var_arg = interface.Variant()
@@ -464,7 +467,7 @@ class SDKWrapper:
 
         with self._sdk_lock:
             try:
-                self.sdk.linkamProcessinterface.Message(
+                self.sdk.linkamProcessMessage(
                     message.value,
                     comm_handle,
                     ctypes.pointer(result),
@@ -559,7 +562,7 @@ class SDKWrapper:
 
         return self.Connection(self, comm_handle)
 
-    def connect_serial(self, port: str) -> Connection:
+    def _connect_serial(self, port: str) -> Connection:
         """ Use SDK to connect to an instrument over RS-232. Not tested.
 
         :param port: serial port name
@@ -569,11 +572,11 @@ class SDKWrapper:
         comm_info = interface.CommsInfo()
 
         port = ctypes.create_string_buffer(port.encode())
-        self.sdk.linkamInitialiseSerialinterface.CommsInfo(ctypes.pointer(comm_info), port)
+        self.sdk.linkamInitialiseSerialCommsInfo(ctypes.pointer(comm_info), port)
 
         return self._connect_common(comm_info)
 
-    def connect_usb(self, serial_number: typing.Optional[str] = None) -> Connection:
+    def _connect_usb(self, serial_number: typing.Optional[str] = None) -> Connection:
         """ Use SDK to connect to an instrument over USB.
 
         :param serial_number: optional serial number of desired instrument
@@ -585,6 +588,27 @@ class SDKWrapper:
         if serial_number is not None:
             serial_number = ctypes.create_string_buffer(serial_number.encode())
 
-        self.sdk.linkamInitialiseUSBinterface.CommsInfo(ctypes.pointer(comm_info), serial_number)
+        self.sdk.linkamInitialiseUSBCommsInfo(ctypes.pointer(comm_info), serial_number)
 
         return self._connect_common(comm_info)
+
+    @contextmanager
+    def connect(self, *args, use_serial: bool = False, **kwargs) -> typing.Generator[Connection, None, None]:
+        if use_serial:
+            connection = self._connect_serial(*args, **kwargs)
+        else:
+            connection = self._connect_usb(*args, **kwargs)
+
+        yield connection
+
+        connection.close()
+
+    def __enter__(self) -> SDKWrapper:
+        # Initialise SDK
+        _ = self.sdk
+
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        # Cleanup SDK
+        self.close()
