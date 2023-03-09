@@ -23,6 +23,7 @@ setup(
     version=version,
     description='Python bindings for the official Linkam SDK',
     long_description=open('README.md').read(),
+    long_description_content_type='text/markdown',
     author=author,
     maintainer=maintainer,
     maintainer_email=maintainer_email,
