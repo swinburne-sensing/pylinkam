@@ -6,13 +6,16 @@
 
 This Python module provides Python bindings for the official C/C++ Linkam SDK. It enables monitoring and control of various instruments provided by Linkam Scientific. The library can optionally be used with the [pint](https://pint.readthedocs.io/en/stable/) package to handle unit conversion.
 
+### Background
+We use a Linkam HFS600E-PB4 stage with T96 controller for gas sensing experiments in the [Swinburne](https://swin.edu.au) Sensor Technology Lab. This library has been parted out from our custom developed experiment software for general use. If you find the package useful we'd love to hear about your projects!
+
 ## Installation
 Note that the Linkam SDK binary files (`LinkamSDK_release.dll` or `LinkamSDK_debug.dll`) and the required license file (typically `Linkam.lsk`) are **not** distributed as part of this module.
 
 By default, the module will look for the Linkam SDK dll using the `$PATH` environment variable, appending the module directory before searching.
 
 0. If necessary, rename `LinkamSDK.dll` (recent versions) to `LinkamSDK_release.dll`
-1. Place `LinkamSDK_release.dll` (or `LinkamSDK_debug.dll`) and `Linkam.lsk` files inside the `pylinkam` module folder (the one that contains `__init__.py`)
+1. Place `LinkamSDK_release.dll` (or `LinkamSDK_debug.dll`) and `Linkam.lsk` files inside the `pylinkam` module folder (the one that contains `__init__.py`). Alternately, at runtime you can specify a path to access these files.
 2. Run `demo.py` to check for any issues. This will set the stage temperature to 25°C temporarily.
 
 ## Usage
@@ -32,7 +35,7 @@ with sdk.SDKWrapper() as wrapper:
 ```
 
 ## Tested Devices
-This library has been developed for the following Linkam instruments/addons, a check indicated that functionality has been verified on working hardware:
+This library has been developed for the following Linkam instruments/addons, a check indicates that functionality has been verified on working hardware:
 
 - [x] T96 System Controller (via USB)
 - [ ] T96 System Controller (via RS-232, might work :shrug:)
@@ -40,7 +43,14 @@ This library has been developed for the following Linkam instruments/addons, a c
 - [x] RH95 Humidity Controller
 - [ ] LNP96 Cooling Option (should work)
 
-Only tested under Windows 10 using LinkamSDK `v3.0.5.5` and `v3.0.15.35`. In theory the SDK binary files for Linux should have identical mappings, but this hasn't been tested. 
+Note that connecting multiple devices to a single host is also untested.
+
+## Tested API Versions and Platforms
+
+- [x] `v3.0.5.5` on Windows 10
+- [x] `v3.0.15.35` on Windows 10
+
+In theory the SDK binary files for Linux should have identical mappings, but this hasn't been tested.
 
 ## Acknowledgments
 
