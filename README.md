@@ -10,7 +10,7 @@ This Python module provides Python bindings for the official C/C++ Linkam SDK. I
 We use a Linkam HFS600E-PB4 stage with T96 controller for gas sensing experiments in the [Swinburne](https://swin.edu.au) Sensor Technology Lab. This library has been parted out from our custom developed experiment software for general use. If you find the package useful we'd love to hear about your projects!
 
 ## Installation
-Note that the Linkam SDK binary files (`LinkamSDK_release.dll` or `LinkamSDK_debug.dll`) and the required license file (typically `Linkam.lsk`) are **not** distributed as part of this module.
+Note that the Linkam SDK binary files (`LinkamSDK.dll` or `libLinkamSDK.so`) and the required license file (typically `Linkam.lsk`) are **not** distributed as part of this module.
 
 By default, the module will look for the Linkam SDK binary using the `$PATH` environment variable via the `ctypes` module and will automatically append the module directory before searching.
 
