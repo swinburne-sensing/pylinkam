@@ -12,11 +12,10 @@ We use a Linkam HFS600E-PB4 stage with T96 controller for gas sensing experiment
 ## Installation
 Note that the Linkam SDK binary files (`LinkamSDK_release.dll` or `LinkamSDK_debug.dll`) and the required license file (typically `Linkam.lsk`) are **not** distributed as part of this module.
 
-By default, the module will look for the Linkam SDK dll using the `$PATH` environment variable, appending the module directory before searching.
+By default, the module will look for the Linkam SDK binary using the `$PATH` environment variable via the `ctypes` module and will automatically append the module directory before searching.
 
-0. If necessary, rename `LinkamSDK.dll` (recent versions) to `LinkamSDK_release.dll`
-1. Place `LinkamSDK_release.dll` (or `LinkamSDK_debug.dll`) and `Linkam.lsk` files inside the `pylinkam` module folder (the one that contains `__init__.py`). Alternately, at runtime you can specify a path to access these files.
-2. Run `demo.py` to check for any issues. This will set the stage temperature to 25°C temporarily.
+1. Place `LinkamSDK.dll` (debug or release) and `Linkam.lsk` files inside the `pylinkam` module folder (the one that contains `__init__.py`). Alternately, at runtime you can specify a binary name (remove the `.dll` extension on Windows) and path to access these files.
+2. Run `demo.py` to check for any connection/path issues. This will set the stage temperature to 25°C temporarily.
 
 ## Usage
 Initialise the SDK by creating an instance of `pylinkam.sdk.SDKWrapper` providing optional paths for SDK binary files and the license file. Once initialised, use the `connect()` method to create a context manager for the connection to a device.  
@@ -43,18 +42,18 @@ This library has been developed for the following Linkam instruments/addons, a c
 - [x] RH95 Humidity Controller
 - [ ] LNP96 Cooling Option (should work)
 
-Note that connecting multiple devices to a single host is also untested.
+Note that connecting multiple devices to a single host is untested, though the connect functions per the Linkam API *can* accept a serial number.
 
 ## Tested API Versions and Platforms
 
 - [x] `v3.0.5.5` on Windows 10
 - [x] `v3.0.15.35` on Windows 10
 
-In theory the SDK binary files for Linux should have identical mappings, but this hasn't been tested.
+In theory the SDK binary files for Linux should have identical mappings, but this hasn't been tested. Versions `< 1.2.3` used `WinDLL` to load the Linkam SDK binary, however more recent versions will automatically detect the platform and use `CDLL` when not on Windows. We don't have hardware connected to a Linux machine to test, so please report any issues.
 
 ## Acknowledgments
 
-Developed at [Swinburne University of Technology](https://swin.edu.au). If used in an academic project, please consider citing this work as it helps attract funding and track research outputs:
+Developed at [Swinburne University of Technology](https://swin.edu.au). If used in an academic or research project, please consider citing this work as it helps attract funding and track research outputs:
 
 ```
 C. J. Harrison and M. Shafiei. pylinkam. (2022). [Online]. doi: https://doi.org/10.5281/zenodo.6758012

@@ -37,7 +37,13 @@ class ControllerConnectError(Exception):
 class SDKWrapper:
     """ Wrapper for Linkam SDK. """
 
+    # Assume SDK files are in the library root, can be overriden at instantiation
     _DEFAULT_SDK_ROOT_PATH = os.path.dirname(os.path.abspath(__file__))
+
+    _DEFAULT_BIN_NAME_LINUX = 'libLinkamSDK.so'
+
+    # Strip the .dll suffix, this is re-added automatically
+    _DEFAULT_BIN_NAME_WINDOWS = 'LinkamSDK'
 
     class Connection:
         """ Wrapper for connection to Linkam controller. """
@@ -331,22 +337,29 @@ class SDKWrapper:
                 comm_handle=self._handle
             ))
 
-    def __init__(self, sdk_root_path: typing.Optional[str] = None, sdk_log_path: typing.Optional[str] = None,
-                 sdk_license_path: typing.Optional[str] = None, debug: bool = False):
+    def __init__(self, sdk_root_path: typing.Optional[str] = None, sdk_bin_name: typing.Optional[str] = None,
+                 sdk_log_path: typing.Optional[str] = None, sdk_license_path: typing.Optional[str] = None):
         """ Initialise the SDK, loading the required binary files.
 
         :param sdk_root_path: search path for SDK binary files, defaults to module directory
+        :param sdk_bin_name: SDK binary name (on Windows remove .dll extension), defaults to platform-dependant name
         :param sdk_log_path: path for SDK logging, defaults to SDK directory
         :param sdk_license_path: path for SDL license file, defaults to SDK directory
-        :param debug: if True use debug DLL, else use release version
         """
         self._sdk_root_path = sdk_root_path or self._DEFAULT_SDK_ROOT_PATH
 
-        self._sdk: typing.Optional[ctypes.WinDLL] = None
+        self._sdk: typing.Optional[ctypes.CDLL] = None
         self._sdk_lock = threading.RLock()
 
         # Setup DLL name and paths
-        self._sdk_dll_name = f"LinkamSDK_{'debug' if debug else 'release'}.dll"
+        if sdk_bin_name is None:
+            if os.name == 'nt':
+                self._sdk_bin_name = self._DEFAULT_BIN_NAME_WINDOWS
+            else:
+                self._sdk_bin_name = self._DEFAULT_BIN_NAME_LINUX
+        else:
+            self._sdk_bin_name = sdk_bin_name
+
         self._sdk_log_path = sdk_log_path or os.path.join(self.sdk_root_path, 'Linkam.log')
         self._sdk_license_path = sdk_license_path or os.path.join(self.sdk_root_path, 'Linkam.lsk')
 
@@ -362,14 +375,18 @@ class SDKWrapper:
         self._sdk = None
 
     @property
-    def sdk(self) -> ctypes.WinDLL:
+    def sdk(self) -> ctypes.CDLL:
         if self._sdk is None:
-            # Load SDK DLL
+            if os.name == 'nt':
+                loader: typing.Type[ctypes.CDLL] = ctypes.WinDLL
+            else:
+                loader = ctypes.CDLL
+
             try:
-                sdk = ctypes.WinDLL(self.sdk_dll_name)
+                sdk = loader(self.sdk_bin_name)
             except FileNotFoundError:
-                # Try absolute path
-                sdk = ctypes.WinDLL(os.path.join(self.sdk_root_path, self.sdk_dll_name))
+                # Re-attempt as an absolute path
+                sdk = loader(os.path.join(self.sdk_root_path, self.sdk_bin_name))
 
             if sdk is None:
                 raise SDKError('Linkam SDK was not loaded')
@@ -418,8 +435,8 @@ class SDKWrapper:
         return self._sdk
 
     @property
-    def sdk_dll_name(self) -> str:
-        return self._sdk_dll_name
+    def sdk_bin_name(self) -> str:
+        return self._sdk_bin_name
 
     @property
     def sdk_license_path(self) -> str:
@@ -572,8 +589,8 @@ class SDKWrapper:
         # Configure serial connection
         comm_info = interface.CommsInfo()
 
-        port = ctypes.create_string_buffer(port.encode())
-        self.sdk.linkamInitialiseSerialCommsInfo(ctypes.pointer(comm_info), port)
+        port_enc = ctypes.create_string_buffer(port.encode())
+        self.sdk.linkamInitialiseSerialCommsInfo(ctypes.pointer(comm_info), port_enc)
 
         return self._connect_common(comm_info)
 
@@ -587,9 +604,11 @@ class SDKWrapper:
         comm_info = interface.CommsInfo()
 
         if serial_number is not None:
-            serial_number = ctypes.create_string_buffer(serial_number.encode())
+            serial_number_enc = ctypes.create_string_buffer(serial_number.encode())
+        else:
+            serial_number_enc = None
 
-        self.sdk.linkamInitialiseUSBCommsInfo(ctypes.pointer(comm_info), serial_number)
+        self.sdk.linkamInitialiseUSBCommsInfo(ctypes.pointer(comm_info), serial_number_enc)
 
         return self._connect_common(comm_info)
 

@@ -8,6 +8,6 @@ authors:
     given-names: Mahnaz
     orcid: https://orcid.org/0000-0002-3520-1553
 title: "pylinkam"
-version: 1.2.2
+version: 1.2.3
 doi: 10.5281/zenodo.6758012
 date-released: 2022-06-27
