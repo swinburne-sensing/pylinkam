@@ -322,7 +322,7 @@ class ControllerConfig(ctypes.Union):
 
 
 class ControllerProgramStatusFlags(ctypes.Structure):
-    _fields_ = [(x, ctypes.c_uint64, 1) for x in [
+    _fields_ = [(x, ctypes.c_uint32, 1) for x in [
         'dirn',
         'hold',
         'heat',
