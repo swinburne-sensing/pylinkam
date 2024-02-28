@@ -17,7 +17,7 @@ By default, the module will look for the Linkam SDK binary using the `$PATH` env
 1. Place `LinkamSDK.dll` (debug or release) and `Linkam.lsk` files inside the `pylinkam` **module folder** (the one that contains `__init__.py`). Alternately, at runtime you can specify a binary name (remove the `.dll` extension on Windows) and path to access these files.
 2. Run `demo.py` to check for any connection/path issues. This will set the stage temperature to 25°C temporarily.
 
-### Get Module Path
+### Getting Module Path and Troubleshooting
 
 Running the following in a Python console/environment should tell you where the place the `LinkamSDK.dll` (or Linux equivilent) and `Linkam.lsk` files.
 
@@ -26,10 +26,12 @@ import pylinkam
 print(pylinkam.__file__)
 ```
 
-## Usage
-Initialise the SDK by creating an instance of `pylinkam.sdk.SDKWrapper` providing optional paths for SDK binary files and the license file. Once initialised, use the `connect()` method to create a context manager for the connection to a device.  
+The SDK also generates log files in this directory by default, this is the first place to check when diagnosing issues. If you see license errors (quite common even in legimate installations) you'll need to contact your equipment supplier or Linkam support.
 
+## Usage
 ### Context Manager Example
+Initialise the SDK by creating an instance of `pylinkam.sdk.SDKWrapper` providing optional paths for SDK binary files and the license file. Once initialised, use the `connect()` method to create a context manager for the connection to a device.
+
 ```python
 from pylinkam import interface, sdk
 
@@ -43,6 +45,8 @@ with sdk.SDKWrapper() as wrapper:
 ```
 
 ### Manual Example
+You can also use the classes directly without context managers, but you'll have to close connections manually to avoid memory leaks.
+
 ```python
 from pylinkam import interface, sdk
 

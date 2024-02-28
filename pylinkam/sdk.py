@@ -328,8 +328,6 @@ class SDKWrapper:
                 else:
                     n = n.magnitude
 
-            assert value_type.variant_field is not None
-
             return bool(self._parent.process_message(
                 interface.Message.SET_VALUE,
                 ('vStageValueType', value_type.value),
@@ -375,7 +373,7 @@ class SDKWrapper:
     def close(self) -> None:
         if hasattr(self, '_sdk') and self._sdk is not None:
             self._sdk.linkamExitSDK()
-            _LOGGER.info(f"Cleaned up SDK")
+            _LOGGER.debug('Cleaned up SDK')
 
         self._sdk = None
 
@@ -426,7 +424,7 @@ class SDKWrapper:
 
             # Initialise SDK
             if not sdk.linkamInitialiseSDK(self.sdk_log_path.encode(), self.sdk_license_path.encode(), False):
-                raise SDKError('Failed to initialize Linkam SDK')
+                raise SDKError(f"Failed to initialize Linkam SDK, check {self._sdk_log_path} for details")
 
             # Save handle
             with self._sdk_lock:
@@ -553,6 +551,7 @@ class SDKWrapper:
         comm_handle = interface.CommsHandle(0)
 
         with util.supress_stdout():
+            # Capture SDK output on stdout
             connection_result = self.process_message(
                 interface.Message.OPEN_COMMS,
                 ('vPtr', comm_info),
