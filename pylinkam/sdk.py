@@ -520,7 +520,7 @@ class SDKWrapper:
             comm_handle=comm_handle
         )
 
-        if type(result) is bool and not result:
+        if isinstance(result, bool) and not result:
             raise SDKError(f"Unable to read response to SDK message {message!s}")
 
         return buffer.value.decode().strip()

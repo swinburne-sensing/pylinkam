@@ -13,6 +13,9 @@ with sdk.SDKWrapper() as handle:
         print(f"Heater measurement: {connection.get_value(interface.StageValueType.HEATER1_TEMP)}")
         print(f"Heater set-point before: {connection.get_value(interface.StageValueType.HEATER_SETPOINT)}")
 
+        print(f"Configuration: {connection.get_controller_config().to_mapping()}")
+        print(f"Status: {connection.get_status().to_mapping()}")
+
         if not connection.set_value(interface.StageValueType.HEATER_SETPOINT, 25):
             raise Exception('Something broke')
         connection.enable_heater(True)

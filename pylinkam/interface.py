@@ -3,6 +3,7 @@ from __future__ import annotations
 import ctypes
 import enum
 import typing
+from collections import OrderedDict
 
 
 class LoggingLevel(enum.IntEnum):
@@ -126,6 +127,57 @@ class Message(enum.IntEnum):
     # LINKAM ONLY DISABLE_SERIAL_LOOPBACK_TEST = 0x63
 
 
+class _InterfaceMixin(object):
+    if typing.TYPE_CHECKING:
+        _fields_: typing.ClassVar[
+            typing.List[
+                typing.Union[
+                    typing.Tuple[str, ctypes._CDataMeta],
+                    typing.Tuple[str, ctypes._CDataMeta, int]
+                ]
+            ]
+        ]
+
+    def to_mapping(self, strip_unused: bool = True) -> typing.Mapping[str, typing.Any]:
+        mapping = {}
+
+        if isinstance(self, ctypes.Union):
+            src = self.flags
+        else:
+            src = self
+        
+        for field in src._fields_:
+            if strip_unused and ('unused' in field[0] or 'padding' in field[0]):
+                continue
+
+            value = getattr(src, field[0])
+
+            if isinstance(value, _InterfaceMixin):
+                value = value.to_mapping()
+            elif isinstance(value, int) and len(field) >= 3 and field[2]:
+                # Cast bit fields to boolean
+                value = bool(value)
+
+            mapping[field[0]] = value
+
+        return mapping
+
+    def __repr__(self) -> str:
+        attrs = OrderedDict()
+
+        for field in self._fields_:
+            value = getattr(self, field[0])
+
+            if value == 0 and ('unused' in field[0] or 'padding' in field[0]):
+                continue
+
+            attrs[field[0]] = value
+
+        fields_str = [f"{field}={value!r}" for field, value in attrs.items()]
+
+        return f"<{self.__class__.__name__}({', '.join(fields_str)})"
+
+
 # Type definitions
 class CommsType(enum.IntEnum):
     NONE = 0
@@ -133,7 +185,7 @@ class CommsType(enum.IntEnum):
     USB = 2
 
 
-class CommsInfoSerial(ctypes.Structure):
+class CommsInfoSerial(ctypes.Structure, _InterfaceMixin):
     _fields_ = [
         ('port', 64 * ctypes.c_char),
         ('baudrate', ctypes.c_uint32),
@@ -146,7 +198,7 @@ class CommsInfoSerial(ctypes.Structure):
     ]
 
 
-class CommsInfoUSB(ctypes.Structure):
+class CommsInfoUSB(ctypes.Structure, _InterfaceMixin):
     _fields_ = [
         ('vendorID', ctypes.c_uint16),
         ('productID', ctypes.c_uint16),
@@ -155,7 +207,7 @@ class CommsInfoUSB(ctypes.Structure):
     ]
 
 
-class CommsInfoUnion(ctypes.Union):
+class CommsInfoUnion(ctypes.Union, _InterfaceMixin):
     _fields_ = [
         ('info', 124 * ctypes.c_char),
         ('serial', CommsInfoSerial),
@@ -163,14 +215,14 @@ class CommsInfoUnion(ctypes.Union):
     ]
 
 
-class CommsInfo(ctypes.Structure):
+class CommsInfo(ctypes.Structure, _InterfaceMixin):
     _fields_ = [
         ('type', ctypes.c_uint32),
         ('info', CommsInfoUnion)
     ]
 
 
-class ConnectionStatusFlags(ctypes.Structure):
+class ConnectionStatusFlags(ctypes.Structure, _InterfaceMixin):
     _fields_ = [(x, ctypes.c_uint32, 1) for x in [
         'connected',
         'errorNoDeviceFound',
@@ -207,7 +259,7 @@ class ConnectionStatusFlags(ctypes.Structure):
     ]]
 
 
-class ConnectionStatus(ctypes.Union):
+class ConnectionStatus(ctypes.Union, _InterfaceMixin):
     _fields_ = [
         ('flags', ConnectionStatusFlags),
         ('value', ctypes.c_uint32)
@@ -245,7 +297,7 @@ class ControllerErrorCode(enum.IntEnum):
     CMS196_MOTOR_POSN_ERROR = 30
 
 
-class ControllerConfigFlags(ctypes.Structure):
+class ControllerConfigFlags(ctypes.Structure, _InterfaceMixin):
     _fields_ = [(x, ctypes.c_uint64, 1) for x in [
         'supportsHeater',
         'supportsDualHeater',
@@ -314,14 +366,14 @@ class ControllerConfigFlags(ctypes.Structure):
     ]]
 
 
-class ControllerConfig(ctypes.Union):
+class ControllerConfig(ctypes.Union, _InterfaceMixin):
     _fields_ = [
         ('flags', ControllerConfigFlags),
         ('value', ctypes.c_uint64)
     ]
 
 
-class ControllerProgramStatusFlags(ctypes.Structure):
+class ControllerProgramStatusFlags(ctypes.Structure, _InterfaceMixin):
     _fields_ = [(x, ctypes.c_uint32, 1) for x in [
         'dirn',
         'hold',
@@ -358,14 +410,14 @@ class ControllerProgramStatusFlags(ctypes.Structure):
     ]]
 
 
-class ControllerProgramStatus(ctypes.Union):
+class ControllerProgramStatus(ctypes.Union, _InterfaceMixin):
     _fields_ = [
         ('flags', ControllerProgramStatusFlags),
         ('value', ctypes.c_uint32)
     ]
 
 
-class ControllerStatusFlags(ctypes.Structure):
+class ControllerStatusFlags(ctypes.Structure, _InterfaceMixin):
     _fields_ = [(x, ctypes.c_uint64, 1) for x in [
         'controllerError',
         'heater1RampSetPoint',
@@ -434,14 +486,14 @@ class ControllerStatusFlags(ctypes.Structure):
     ]]
 
 
-class ControllerStatus(ctypes.Union):
+class ControllerStatus(ctypes.Union, _InterfaceMixin):
     _fields_ = [
         ('flags', ControllerStatusFlags),
         ('value', ctypes.c_uint64)
     ]
 
 
-class HeaterDetails(ctypes.Structure):
+class HeaterDetails(ctypes.Structure, _InterfaceMixin):
     _fields_ = [
         ('minLimit', ctypes.c_float),
         ('maxLimit', ctypes.c_float),
@@ -451,7 +503,7 @@ class HeaterDetails(ctypes.Structure):
     ]
 
 
-class RHStatusFlags(ctypes.Structure):
+class RHStatusFlags(ctypes.Structure, _InterfaceMixin):
     _fields_ = [
         ('colSel', ctypes.c_uint32, 4),
         ('present', ctypes.c_uint32, 1),
@@ -483,14 +535,14 @@ class RHStatusFlags(ctypes.Structure):
     ]
 
 
-class RHStatus(ctypes.Union):
+class RHStatus(ctypes.Union, _InterfaceMixin):
     _fields_ = [
         ('flags', RHStatusFlags),
         ('value', ctypes.c_uint32)
     ]
 
 
-class RHUnit(ctypes.Structure):
+class RHUnit(ctypes.Structure, _InterfaceMixin):
     _fields_ = [
         ('rh', ctypes.c_float),
         ('rhSetpoint', ctypes.c_float),
@@ -508,7 +560,7 @@ class RHUnit(ctypes.Structure):
     ]
 
 
-class Running(ctypes.Structure):
+class Running(ctypes.Structure, _InterfaceMixin):
     _fields_ = [
         ('timeLeft', ctypes.c_float),
         ('lnpSpeed', ctypes.c_float),
@@ -522,7 +574,7 @@ class Running(ctypes.Structure):
     ]
 
 
-class StageConfigFlags(ctypes.Structure):
+class StageConfigFlags(ctypes.Structure, _InterfaceMixin):
     _fields_ = [(x, ctypes.c_uint64, 1) for x in [
         'standardStage',
         'highTempStage',
@@ -591,7 +643,7 @@ class StageConfigFlags(ctypes.Structure):
     ]]
 
 
-class StageConfig(ctypes.Union):
+class StageConfig(ctypes.Union, _InterfaceMixin):
     _fields_ = [
         ('flags', StageConfigFlags),
         ('value', ctypes.c_uint64)
@@ -601,7 +653,7 @@ class StageConfig(ctypes.Union):
 class StageValueType(enum.IntEnum):
     if typing.TYPE_CHECKING:
         _value_: int
-        variant_field: typing.Optional[str]
+        variant_field: str
         unit: typing.Optional[str]
 
     def __new__(cls, value: int, variant_field: str, unit: typing.Optional[str] = None) -> StageValueType:
