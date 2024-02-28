@@ -16,7 +16,7 @@ def add_path(path: str) -> None:
 def supress_stdout(dest_path: str = os.devnull) -> typing.Generator[None, None, None]:
     stdout_fileno = sys.stdout.fileno()
 
-    def _redirect_stdout(dest: typing.IO) -> None:
+    def _redirect_stdout(dest: typing.TextIO) -> None:
         # Close original handle
         sys.stdout.close()
 
