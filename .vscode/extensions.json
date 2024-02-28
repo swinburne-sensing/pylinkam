@@ -1,0 +1,9 @@
+{
+    "recommendations": [
+        "matangover.mypy",
+        "ms-python.python",
+        "ms-python.debugpy",
+        "donjayamanne.python-environment-manager",
+        "ms-python.vscode-pylance"
+    ]
+}
