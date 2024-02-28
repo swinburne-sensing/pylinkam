@@ -82,6 +82,7 @@ Note that connecting multiple devices to a single host is untested, though the c
 
 - [x] `v3.0.5.5` on Windows 10
 - [x] `v3.0.15.35` on Windows 10
+- [x] `v3.0.19.12` on Windows 10
 
 In theory the SDK binary files for Linux should have identical mappings, but this hasn't been tested. Versions `< 1.2.3` used `WinDLL` to load the Linkam SDK binary, however more recent versions will automatically detect the platform and use `CDLL` when not on Windows. We don't have hardware connected to a Linux machine to test, so please report any issues.
 
