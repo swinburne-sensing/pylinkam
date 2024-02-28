@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 import ctypes
@@ -145,7 +146,7 @@ class _InterfaceMixin(object):
             src = self.flags
         else:
             src = self
-        
+
         for field in src._fields_:
             if strip_unused and ('unused' in field[0] or 'padding' in field[0]):
                 continue

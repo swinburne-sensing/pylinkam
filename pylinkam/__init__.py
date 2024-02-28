@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 __app_name__ = 'pylinkam'
 __version__ = '1.2.5'
 

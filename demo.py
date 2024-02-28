@@ -1,8 +1,8 @@
+# -*- coding: utf-8 -*-
 import logging
 import time
 
 from pylinkam import interface, sdk
-
 
 logging.basicConfig(level=logging.DEBUG)
 

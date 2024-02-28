@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 import ctypes
@@ -16,7 +17,6 @@ except ImportError:
     pint: typing.Optional[ModuleType] = None
 
 from pylinkam import interface, util
-
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -267,7 +267,7 @@ class SDKWrapper:
                 18,
                 self._handle
             )
-            
+
         def get_status(self) -> interface.ControllerStatus:
             return typing.cast(interface.ControllerStatus, self._parent.process_message(
                 interface.Message.GET_STATUS,

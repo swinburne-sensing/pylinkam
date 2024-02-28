@@ -1,10 +1,10 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 import os
 import re
 
-from setuptools import setup, find_packages
-
+from setuptools import find_packages, setup
 
 # Read properties from __init__.py
 with open(os.path.join(os.path.dirname(__file__), 'pylinkam', '__init__.py')) as file_init:
