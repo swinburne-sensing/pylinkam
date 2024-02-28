@@ -367,6 +367,11 @@ class SDKWrapper:
         # Release SDK if connected
         self.close()
 
+    def open(self) -> None:
+        """ Ensure the SDK is initialised for use.
+        """
+        _ = self._sdk
+
     def close(self) -> None:
         if hasattr(self, '_sdk') and self._sdk is not None:
             self._sdk.linkamExitSDK()
@@ -580,7 +585,7 @@ class SDKWrapper:
 
         return self.Connection(self, comm_handle)
 
-    def _connect_serial(self, port: str) -> Connection:
+    def connect_serial(self, port: str) -> Connection:
         """ Use SDK to connect to an instrument over RS-232. Not tested.
 
         :param port: serial port name
@@ -594,7 +599,7 @@ class SDKWrapper:
 
         return self._connect_common(comm_info)
 
-    def _connect_usb(self, serial_number: typing.Optional[str] = None) -> Connection:
+    def connect_usb(self, serial_number: typing.Optional[str] = None) -> Connection:
         """ Use SDK to connect to an instrument over USB.
 
         :param serial_number: optional serial number of desired instrument
@@ -615,9 +620,9 @@ class SDKWrapper:
     @contextmanager
     def connect(self, *args, use_serial: bool = False, **kwargs) -> typing.Generator[Connection, None, None]:
         if use_serial:
-            connection = self._connect_serial(*args, **kwargs)
+            connection = self.connect_serial(*args, **kwargs)
         else:
-            connection = self._connect_usb(*args, **kwargs)
+            connection = self.connect_usb(*args, **kwargs)
 
         yield connection
 

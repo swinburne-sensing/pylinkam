@@ -14,13 +14,22 @@ Note that the Linkam SDK binary files (`LinkamSDK.dll` or `libLinkamSDK.so`) and
 
 By default, the module will look for the Linkam SDK binary using the `$PATH` environment variable via the `ctypes` module and will automatically append the module directory before searching.
 
-1. Place `LinkamSDK.dll` (debug or release) and `Linkam.lsk` files inside the `pylinkam` module folder (the one that contains `__init__.py`). Alternately, at runtime you can specify a binary name (remove the `.dll` extension on Windows) and path to access these files.
+1. Place `LinkamSDK.dll` (debug or release) and `Linkam.lsk` files inside the `pylinkam` **module folder** (the one that contains `__init__.py`). Alternately, at runtime you can specify a binary name (remove the `.dll` extension on Windows) and path to access these files.
 2. Run `demo.py` to check for any connection/path issues. This will set the stage temperature to 25°C temporarily.
+
+### Get Module Path
+
+Running the following in a Python console/environment should tell you where the place the `LinkamSDK.dll` (or Linux equivilent) and `Linkam.lsk` files.
+
+```python
+import pylinkam
+print(pylinkam.__file__)
+```
 
 ## Usage
 Initialise the SDK by creating an instance of `pylinkam.sdk.SDKWrapper` providing optional paths for SDK binary files and the license file. Once initialised, use the `connect()` method to create a context manager for the connection to a device.  
 
-### Example
+### Context Manager Example
 ```python
 from pylinkam import interface, sdk
 
@@ -32,6 +41,27 @@ with sdk.SDKWrapper() as wrapper:
         temperature = connection.get_value(interface.StageValueType.HEATER1_TEMP)
         connection.set_value(interface.StageValueType.HEATER_SETPOINT, 30)
 ```
+
+### Manual Example
+```python
+from pylinkam import interface, sdk
+
+
+connection = sdk.SDKWrapper().connect_usb()
+
+print(f"Name: {connection.get_controller_name()}")
+
+temperature = connection.get_value(interface.StageValueType.HEATER1_TEMP)
+connection.set_value(interface.StageValueType.HEATER_SETPOINT, 30)
+
+connection.close()
+```
+
+## Python Versions
+This library requires a minimum of Python 3.6 to function. Newer versions should be compatible.
+
+## CPU Architecture
+This library has only been tested on 64-bit x86 processors.
 
 ## Tested Devices
 This library has been developed for the following Linkam instruments/addons, a check indicates that functionality has been verified on working hardware:
