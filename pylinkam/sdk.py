@@ -550,13 +550,12 @@ class SDKWrapper:
         # Apparently this is ignored internally...
         comm_handle = interface.CommsHandle(0)
 
-        with util.supress_stdout():
-            # Capture SDK output on stdout
-            connection_result = self.process_message(
-                interface.Message.OPEN_COMMS,
-                ('vPtr', comm_info),
-                ('vPtr', comm_handle)
-            )
+        # Capture SDK output on stdout
+        connection_result = self.process_message(
+            interface.Message.OPEN_COMMS,
+            ('vPtr', comm_info),
+            ('vPtr', comm_handle)
+        )
 
         if not connection_result.flags.connected:
             if connection_result.flags.errorNoDeviceFound:
