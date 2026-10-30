@@ -1,0 +1,58 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pylinkam"
+dynamic = ["version"]
+description = "Python bindings for the official Linkam SDK"
+readme = "README.md"
+license = { text = "GPLv3" }
+authors = [
+    { name = "Chris Harrison" },
+]
+maintainers = [
+    { name = "Chris Harrison", email = "629204+ravngr@users.noreply.github.com" },
+]
+requires-python = ">=3.7"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Natural Language :: English",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Topic :: System :: Hardware",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+[project.optional-dependencies]
+units = ["pint"]
+
+[project.urls]
+Homepage = "https://github.com/swinburne-sensing/pylinkam"
+Repository = "https://github.com/swinburne-sensing/pylinkam"
+Issues = "https://github.com/swinburne-sensing/pylinkam/issues"
+
+[dependency-groups]
+dev = [
+    "pre-commit",
+    "pint",
+    "pytest",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.setuptools]
+packages = ["pylinkam"]
+
+[tool.setuptools.package-data]
+pylinkam = ["py.typed"]
+
+[tool.setuptools.dynamic]
+version = { attr = "pylinkam.__version__" }

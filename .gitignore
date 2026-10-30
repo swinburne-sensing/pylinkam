@@ -370,3 +370,6 @@ cython_debug/
 *.lsk
 
 .idea/
+
+# uv lock file (library, not committed)
+uv.lock

@@ -10,23 +10,31 @@ This Python module provides Python bindings for the official C/C++ Linkam SDK. I
 We use a Linkam HFS600E-PB4 stage with T96 controller for gas sensing experiments in the [Swinburne](https://swin.edu.au) Sensor Technology Lab. This library has been parted out from our custom developed experiment software for general use. If you find the package useful we'd love to hear about your projects!
 
 ## Installation
+Install the package from PyPI:
+
+```bash
+pip install pylinkam
+# or, using uv:
+uv pip install pylinkam
+```
+
 Note that the Linkam SDK binary files (`LinkamSDK.dll` or `libLinkamSDK.so`) and the required license file (typically `Linkam.lsk`) are **not** distributed as part of this module.
 
 By default, the module will look for the Linkam SDK binary using the `$PATH` environment variable via the `ctypes` module and will automatically append the module directory before searching.
 
-1. Place `LinkamSDK.dll` (debug or release) and `Linkam.lsk` files inside the `pylinkam` **module folder** (the one that contains `__init__.py`). Alternately, at runtime you can specify a binary name (remove the `.dll` extension on Windows) and path to access these files.
+1. Place `LinkamSDK.dll` (debug or release) and `Linkam.lsk` files inside the `pylinkam` **module folder** (the one that contains `__init__.py`). Alternatively, at runtime you can specify a binary name (remove the `.dll` extension on Windows) and path to access these files.
 2. Run `demo.py` to check for any connection/path issues. This will set the stage temperature to 25°C temporarily.
 
 ### Getting Module Path and Troubleshooting
 
-Running the following in a Python console/environment should tell you where the place the `LinkamSDK.dll` (or Linux equivilent) and `Linkam.lsk` files.
+Running the following in a Python console/environment should tell you where to place the `LinkamSDK.dll` (or Linux equivalent) and `Linkam.lsk` files.
 
 ```python
 import pylinkam
 print(pylinkam.__file__)
 ```
 
-The SDK also generates log files in this directory by default, this is the first place to check when diagnosing issues. If you see license errors (quite common even in legimate installations) you'll need to contact your equipment supplier or Linkam support.
+The SDK also generates log files in this directory by default, this is the first place to check when diagnosing issues. If you see license errors (quite common even in legitimate installations) you'll need to contact your equipment supplier or Linkam support.
 
 ## Usage
 ### Context Manager Example
@@ -62,7 +70,7 @@ connection.close()
 ```
 
 ## Python Versions
-This library requires a minimum of Python 3.6 to function. Newer versions should be compatible.
+This library requires a minimum of Python 3.7 to function. Newer versions should be compatible.
 
 ## CPU Architecture
 This library has only been tested on 64-bit x86 processors.

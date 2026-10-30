@@ -8,6 +8,7 @@ from collections import OrderedDict
 
 
 class LoggingLevel(enum.IntEnum):
+    """ SDK logging verbosity levels. """
     MINIMAL = 0
     INFORMATIVE = 1
     VERBOSE = 2
@@ -15,6 +16,11 @@ class LoggingLevel(enum.IntEnum):
 
 
 class Message(enum.IntEnum):
+    """ Linkam SDK message identifiers.
+
+    Each member value is the message ID, with an optional second tuple element naming the
+    :class:`Variant` field used to hold the message result.
+    """
     if typing.TYPE_CHECKING:
         _value_: int
         variant_field: typing.Optional[str]
@@ -129,6 +135,7 @@ class Message(enum.IntEnum):
 
 
 class _InterfaceMixin(object):
+    """ Mixin for SDK interface structures/unions providing mapping export and readable reprs. """
     if typing.TYPE_CHECKING:
         _fields_: typing.ClassVar[
             typing.List[
@@ -140,9 +147,14 @@ class _InterfaceMixin(object):
         ]
 
     def to_mapping(self, strip_unused: bool = True) -> typing.Mapping[str, typing.Any]:
+        """ Export the structure/union fields as a mapping of field names to values.
+
+        :param strip_unused: if True, omit fields whose name contains 'unused' or 'padding'
+        :return: mapping of field name to value, bit fields are cast to bool
+        """
         mapping = {}
 
-        if isinstance(self, ctypes.Union):
+        if isinstance(self, ctypes.Union) and hasattr(self, 'flags'):
             src = self.flags
         else:
             src = self
@@ -176,17 +188,19 @@ class _InterfaceMixin(object):
 
         fields_str = [f"{field}={value!r}" for field, value in attrs.items()]
 
-        return f"<{self.__class__.__name__}({', '.join(fields_str)})"
+        return f"<{self.__class__.__name__}({', '.join(fields_str)})>"
 
 
 # Type definitions
 class CommsType(enum.IntEnum):
+    """ Communication interface type. """
     NONE = 0
     SERIAL = 1
     USB = 2
 
 
 class CommsInfoSerial(ctypes.Structure, _InterfaceMixin):
+    """ Serial (RS-232) connection parameters. """
     _fields_ = [
         ('port', 64 * ctypes.c_char),
         ('baudrate', ctypes.c_uint32),
@@ -200,6 +214,7 @@ class CommsInfoSerial(ctypes.Structure, _InterfaceMixin):
 
 
 class CommsInfoUSB(ctypes.Structure, _InterfaceMixin):
+    """ USB connection parameters. """
     _fields_ = [
         ('vendorID', ctypes.c_uint16),
         ('productID', ctypes.c_uint16),
@@ -209,6 +224,7 @@ class CommsInfoUSB(ctypes.Structure, _InterfaceMixin):
 
 
 class CommsInfoUnion(ctypes.Union, _InterfaceMixin):
+    """ Union of connection parameters, one per interface type. """
     _fields_ = [
         ('info', 124 * ctypes.c_char),
         ('serial', CommsInfoSerial),
@@ -217,6 +233,7 @@ class CommsInfoUnion(ctypes.Union, _InterfaceMixin):
 
 
 class CommsInfo(ctypes.Structure, _InterfaceMixin):
+    """ Connection information used when opening communications with a controller. """
     _fields_ = [
         ('type', ctypes.c_uint32),
         ('info', CommsInfoUnion)
@@ -224,6 +241,7 @@ class CommsInfo(ctypes.Structure, _InterfaceMixin):
 
 
 class ConnectionStatusFlags(ctypes.Structure, _InterfaceMixin):
+    """ Individual result flags from a connection attempt. """
     _fields_ = [(x, ctypes.c_uint32, 1) for x in [
         'connected',
         'errorNoDeviceFound',
@@ -261,6 +279,7 @@ class ConnectionStatusFlags(ctypes.Structure, _InterfaceMixin):
 
 
 class ConnectionStatus(ctypes.Union, _InterfaceMixin):
+    """ Result of a connection attempt, accessible as individual flags or a raw value. """
     _fields_ = [
         ('flags', ConnectionStatusFlags),
         ('value', ctypes.c_uint32)
@@ -268,9 +287,10 @@ class ConnectionStatus(ctypes.Union, _InterfaceMixin):
 
 
 class ControllerErrorCode(enum.IntEnum):
+    """ Controller error codes reported by the SDK. """
     NONE = 0
     STAGE_CABLE_DISCONNECTED = 1
-    STAGE_CABLE_ERROR = 2,
+    STAGE_CABLE_ERROR = 2
     STAGE_TEMP_SENSOR_OPEN_OVERRANGE = 3
     LOAD_POWER_OUTPUT_VOLTAGE_WRONG = 4
     T95_RELAY_MISSING = 5
@@ -299,6 +319,7 @@ class ControllerErrorCode(enum.IntEnum):
 
 
 class ControllerConfigFlags(ctypes.Structure, _InterfaceMixin):
+    """ Individual controller capability flags. """
     _fields_ = [(x, ctypes.c_uint64, 1) for x in [
         'supportsHeater',
         'supportsDualHeater',
@@ -368,6 +389,7 @@ class ControllerConfigFlags(ctypes.Structure, _InterfaceMixin):
 
 
 class ControllerConfig(ctypes.Union, _InterfaceMixin):
+    """ Controller capabilities, accessible as individual flags or a raw value. """
     _fields_ = [
         ('flags', ControllerConfigFlags),
         ('value', ctypes.c_uint64)
@@ -375,6 +397,7 @@ class ControllerConfig(ctypes.Union, _InterfaceMixin):
 
 
 class ControllerProgramStatusFlags(ctypes.Structure, _InterfaceMixin):
+    """ Individual temperature program status flags. """
     _fields_ = [(x, ctypes.c_uint32, 1) for x in [
         'dirn',
         'hold',
@@ -412,6 +435,7 @@ class ControllerProgramStatusFlags(ctypes.Structure, _InterfaceMixin):
 
 
 class ControllerProgramStatus(ctypes.Union, _InterfaceMixin):
+    """ Temperature program status, accessible as individual flags or a raw value. """
     _fields_ = [
         ('flags', ControllerProgramStatusFlags),
         ('value', ctypes.c_uint32)
@@ -419,6 +443,7 @@ class ControllerProgramStatus(ctypes.Union, _InterfaceMixin):
 
 
 class ControllerStatusFlags(ctypes.Structure, _InterfaceMixin):
+    """ Individual controller status flags. """
     _fields_ = [(x, ctypes.c_uint64, 1) for x in [
         'controllerError',
         'heater1RampSetPoint',
@@ -488,6 +513,7 @@ class ControllerStatusFlags(ctypes.Structure, _InterfaceMixin):
 
 
 class ControllerStatus(ctypes.Union, _InterfaceMixin):
+    """ Controller status, accessible as individual flags or a raw value. """
     _fields_ = [
         ('flags', ControllerStatusFlags),
         ('value', ctypes.c_uint64)
@@ -495,6 +521,7 @@ class ControllerStatus(ctypes.Union, _InterfaceMixin):
 
 
 class HeaterDetails(ctypes.Structure, _InterfaceMixin):
+    """ Temperature controller characteristics (limits, maximum rate, voltage and current). """
     _fields_ = [
         ('minLimit', ctypes.c_float),
         ('maxLimit', ctypes.c_float),
@@ -505,6 +532,7 @@ class HeaterDetails(ctypes.Structure, _InterfaceMixin):
 
 
 class RHStatusFlags(ctypes.Structure, _InterfaceMixin):
+    """ Individual humidity generator status flags. """
     _fields_ = [
         ('colSel', ctypes.c_uint32, 4),
         ('present', ctypes.c_uint32, 1),
@@ -537,6 +565,7 @@ class RHStatusFlags(ctypes.Structure, _InterfaceMixin):
 
 
 class RHStatus(ctypes.Union, _InterfaceMixin):
+    """ Humidity generator status, accessible as individual flags or a raw value. """
     _fields_ = [
         ('flags', RHStatusFlags),
         ('value', ctypes.c_uint32)
@@ -544,6 +573,7 @@ class RHStatus(ctypes.Union, _InterfaceMixin):
 
 
 class RHUnit(ctypes.Structure, _InterfaceMixin):
+    """ Humidity generator measurement data and configuration. """
     _fields_ = [
         ('rh', ctypes.c_float),
         ('rhSetpoint', ctypes.c_float),
@@ -562,6 +592,7 @@ class RHUnit(ctypes.Structure, _InterfaceMixin):
 
 
 class Running(ctypes.Structure, _InterfaceMixin):
+    """ Controller program state, including ramp time remaining and power output details. """
     _fields_ = [
         ('timeLeft', ctypes.c_float),
         ('lnpSpeed', ctypes.c_float),
@@ -576,6 +607,7 @@ class Running(ctypes.Structure, _InterfaceMixin):
 
 
 class StageConfigFlags(ctypes.Structure, _InterfaceMixin):
+    """ Individual stage capability flags. """
     _fields_ = [(x, ctypes.c_uint64, 1) for x in [
         'standardStage',
         'highTempStage',
@@ -645,6 +677,7 @@ class StageConfigFlags(ctypes.Structure, _InterfaceMixin):
 
 
 class StageConfig(ctypes.Union, _InterfaceMixin):
+    """ Stage capabilities, accessible as individual flags or a raw value. """
     _fields_ = [
         ('flags', StageConfigFlags),
         ('value', ctypes.c_uint64)
@@ -652,6 +685,12 @@ class StageConfig(ctypes.Union, _InterfaceMixin):
 
 
 class StageValueType(enum.IntEnum):
+    """ Stage/controller parameters that can be read or written via the SDK.
+
+    Each member value is the parameter ID, the second tuple element names the :class:`Variant`
+    field used to transfer the value, and the optional third element is a unit string understood
+    by the pint package.
+    """
     if typing.TYPE_CHECKING:
         _value_: int
         variant_field: str
@@ -835,7 +874,7 @@ class StageValueType(enum.IntEnum):
     HUMIDITY_DRYING_TIME_LEFT = 166, 'vInt32', 's'
     HUMIDITY_SWAP_TIME_LEFT = 167, 'vInt32', 's'
     HUMIDITY_WATER_TEMP = 168, 'vFloat32', 'degC'
-    VTO_VIDEO_STANDARD = 169, 'vUint32',
+    VTO_VIDEO_STANDARD = 169, 'vUint32'
     TRIGGER_SIGNAL_PULSE_WIDTH = 170, 'vInt32', 's'
     CONNECTION_TYPE = 171, 'vCommsType'
     # DIFFERENT IN/OUT VACUUM_SIMULATOR_PLUG = 172,
@@ -887,10 +926,11 @@ class StageValueType(enum.IntEnum):
 
 
 class Variant(ctypes.Union):
+    """ Union used to pass arguments to and receive results from SDK messages. """
     _fields_ = [
         ('vChar', ctypes.c_char),
         ('vUint8', ctypes.c_uint8),
-        ('vUint16', ctypes.c_uint),
+        ('vUint16', ctypes.c_uint16),
         ('vUint32', ctypes.c_uint32),
         ('vUint64', ctypes.c_uint64),
         ('vInt8', ctypes.c_int8),
@@ -902,7 +942,7 @@ class Variant(ctypes.Union):
         ('vPtr', ctypes.c_void_p),
         ('vBoolean', ctypes.c_bool),
         ('vControllerConfig', ControllerConfig),
-        ('vControllerError', ctypes.c_uint),
+        ('vControllerError', ctypes.c_uint32),
         ('vControllerStatus', ControllerStatus),
         ('vConnectionStatus', ConnectionStatus),
         ('vStageValueType', ctypes.c_uint),
@@ -928,4 +968,5 @@ class Variant(ctypes.Union):
     ]
 
 
+#: Handle to an open communication channel with a controller.
 CommsHandle = ctypes.c_uint64

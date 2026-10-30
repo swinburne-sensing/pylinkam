@@ -7,7 +7,7 @@ import os
 import threading
 import typing
 from contextlib import contextmanager
-from types import ModuleType
+from types import ModuleType, TracebackType
 
 # Try and use pint for units if available
 try:
@@ -123,7 +123,7 @@ class SDKWrapper:
             )
 
         def get_controller_name(self) -> str:
-            """ Get controller hardware version.
+            """ Get controller name.
 
             :return: str
             """
@@ -147,7 +147,7 @@ class SDKWrapper:
         def get_heater_details(self, channel: int = 0) -> interface.HeaterDetails:
             """ Get temperature controller characteristics.
 
-            :param channel: channel number for controllers with multiple temperature regulators
+            :param channel: zero-based channel number for controllers with multiple temperature regulators
             :return: interface.HeaterDetails
             """
             detail = interface.HeaterDetails()
@@ -269,12 +269,20 @@ class SDKWrapper:
             )
 
         def get_status(self) -> interface.ControllerStatus:
+            """ Fetch controller status flags.
+
+            :return: interface.ControllerStatus
+            """
             return typing.cast(interface.ControllerStatus, self._parent.process_message(
                 interface.Message.GET_STATUS,
                 comm_handle=self._handle
             ))
 
         def get_stage_config(self) -> interface.StageConfig:
+            """ Fetch stage configuration/capability flags.
+
+            :return: interface.StageConfig
+            """
             return typing.cast(interface.StageConfig, self._parent.process_message(
                 interface.Message.GET_STAGE_CONFIG,
                 comm_handle=self._handle
@@ -302,7 +310,8 @@ class SDKWrapper:
             """ Read parameter from Linkam controller/stage.
 
             :param value_type: parameter to read
-            :return: various
+            :return: parameter value, type depends on the parameter; if pint is installed and the
+                parameter has a defined unit a pint.Quantity is returned instead
             """
             return self._get_value_msg(interface.Message.GET_VALUE, value_type)
 
@@ -316,11 +325,12 @@ class SDKWrapper:
                 self._get_value_msg(interface.Message.GET_MAX_VALUE, value_type)
 
         def set_value(self, value_type: interface.StageValueType, n: typing.Any) -> bool:
-            """
+            """ Write parameter to Linkam controller/stage.
 
-            :param value_type:
-            :param n:
-            :return:
+            :param value_type: parameter to write
+            :param n: value to set; if pint is installed a pint.Quantity may be passed and will be
+                converted to the parameter's defined unit (if any)
+            :return: True if the value was accepted by the controller
             """
             if pint is not None and isinstance(n, pint.Quantity):
                 if value_type.unit is not None:
@@ -340,9 +350,9 @@ class SDKWrapper:
         """ Initialise the SDK, loading the required binary files.
 
         :param sdk_root_path: search path for SDK binary files, defaults to module directory
-        :param sdk_bin_name: SDK binary name (on Windows remove .dll extension), defaults to platform-dependant name
+        :param sdk_bin_name: SDK binary name (on Windows remove .dll extension), defaults to platform-dependent name
         :param sdk_log_path: path for SDK logging, defaults to SDK directory
-        :param sdk_license_path: path for SDL license file, defaults to SDK directory
+        :param sdk_license_path: path for SDK license file, defaults to SDK directory
         """
         self._sdk_root_path = sdk_root_path or self._DEFAULT_SDK_ROOT_PATH
 
@@ -371,6 +381,8 @@ class SDKWrapper:
         _ = self._sdk
 
     def close(self) -> None:
+        """ Release the SDK, unloading the binary if it was initialised.
+        """
         if hasattr(self, '_sdk') and self._sdk is not None:
             self._sdk.linkamExitSDK()
             _LOGGER.debug('Cleaned up SDK')
@@ -458,9 +470,12 @@ class SDKWrapper:
         """ Process Linkam SDK message.
 
         :param message: message type to process
-        :param args: arguments to pass to library (max 3), should be tuples that describe type
-        :param comm_handle:
-        :return:
+        :param args: arguments to pass to library (max 3), should be tuples of the form
+            (variant field name, value), e.g. ('vUint32', 5)
+        :param comm_handle: communication channel handle, defaults to a null handle for
+            connection-independent messages
+        :return: message result; if the message defines a variant field the contents of that field
+            are returned, otherwise the whole result Variant is returned
         """
         # Cast arguments to variants
         variant_args = []
@@ -503,12 +518,12 @@ class SDKWrapper:
 
     def process_message_str(self, message: interface.Message, buffer_length: int,
                             comm_handle: typing.Optional[interface.CommsHandle] = None) -> str:
-        """ Wrapped version of _sdk_process_message which includes string decoding.
+        """ Wrapped version of process_message which includes string decoding.
 
         :param message: message type to process
         :param buffer_length: length of buffer to allocate for retrieval of string
-        :param comm_handle:
-        :return:
+        :param comm_handle: communication channel handle
+        :return: decoded and stripped response string
         """
         # Allocate buffer for return
         buffer = ctypes.create_string_buffer(buffer_length + 1)
@@ -528,7 +543,7 @@ class SDKWrapper:
     def set_logging_level(self, level: interface.LoggingLevel) -> None:
         """ Set SDK logging level.
 
-        :param level: integer logging level to use
+        :param level: logging verbosity to use
         """
         if not self.process_message(interface.Message.ENABLE_LOGGING, ('vUint32', level.value)):
             raise SDKError('Unspecified error while configuring logging')
@@ -550,7 +565,6 @@ class SDKWrapper:
         # Apparently this is ignored internally...
         comm_handle = interface.CommsHandle(0)
 
-        # Capture SDK output on stdout
         connection_result = self.process_message(
             interface.Message.OPEN_COMMS,
             ('vPtr', comm_info),
@@ -617,6 +631,14 @@ class SDKWrapper:
 
     @contextmanager
     def connect(self, *args, use_serial: bool = False, **kwargs) -> typing.Generator[Connection, None, None]:
+        """ Context manager that opens a connection to an instrument and closes it on exit.
+
+        Positional and keyword arguments are forwarded to the underlying connect method.
+
+        :param use_serial: if True use connect_serial (serial port name as first argument),
+            otherwise use connect_usb (optional serial number as first argument)
+        :return: context manager yielding a Connection
+        """
         if use_serial:
             connection = self.connect_serial(*args, **kwargs)
         else:
@@ -632,6 +654,8 @@ class SDKWrapper:
 
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type: typing.Optional[typing.Type[BaseException]],
+                 exc_val: typing.Optional[BaseException],
+                 exc_tb: typing.Optional[TracebackType]) -> None:
         # Cleanup SDK
         self.close()
